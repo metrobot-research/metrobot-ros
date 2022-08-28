@@ -36,7 +36,7 @@
   </group>
 
   <group ns="$(arg camera2)">
-    <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
       <arg name="device_type"           value="$(arg device_type_camera2)"/>
       <arg name="serial_no"             value="$(arg serial_no_camera2)"/>
       <arg name="tf_prefix"		          value="$(arg tf_prefix_camera2)"/>
@@ -46,10 +46,10 @@
       <arg name="filters"               value="pointcloud"/>
       <arg name="color_width"           value="$(arg color_width)"/>
       <arg name="color_height"          value="$(arg color_height)"/>
-      <arg name="color_fps"          value="$(arg color_fps)"/>
+      <arg name="color_fps"             value="$(arg color_fps)"/>
       <arg name="depth_width"           value="$(arg depth_width)"/>
       <arg name="depth_height"          value="$(arg depth_height)"/>
-      <arg name="depth_fps"          value="$(arg depth_fps)"/>
+      <arg name="depth_fps"             value="$(arg depth_fps)"/>
       <arg name="clip_distance"         value="$(arg clip_distance)"/>
     </include>
   </group>
