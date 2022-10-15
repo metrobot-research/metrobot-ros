@@ -2296,6 +2296,7 @@ void BaseRealSenseNode::publishPointCloud(rs2::points pc, const ros::Time& t, co
     _msg_pointcloud.header.stamp = t;
     if (_align_depth) _msg_pointcloud.header.frame_id = _optical_frame_id[COLOR];
     else              _msg_pointcloud.header.frame_id = _optical_frame_id[DEPTH];
+//    std::cerr << "from warren: /camera/depth/color/points frame id: " + _msg_pointcloud.header.frame_id << std::endl;
     if (!_ordered_pc)
     {
         _msg_pointcloud.width = valid_count;

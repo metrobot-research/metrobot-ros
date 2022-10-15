@@ -64,4 +64,6 @@ https://github.com/IntelRealSense/librealsense/blob/master/third-party/libtm/lib
       <arg name="publish_odom_tf"          value="$(arg publish_odom_tf)"/>
     </include>
   </group>
+
+  <node pkg="rviz" name="rviz" type="rviz" args="-d $(find realsense2_camera)/rviz/t265.rviz" output="screen"/>
 </launch>

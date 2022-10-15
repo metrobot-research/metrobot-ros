@@ -9,4 +9,9 @@
   <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_d435>
+
+<!--  <link name="d435i_link" />-->
+<!--  <xacro:sensor_d435 parent="d435i_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">-->
+<!--    <origin xyz="0 0 0" rpy="0 0 0"/>-->
+<!--  </xacro:sensor_d435>-->
 </robot>

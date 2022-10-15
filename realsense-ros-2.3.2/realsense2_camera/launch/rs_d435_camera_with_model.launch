@@ -36,11 +36,11 @@
   <arg name="pointcloud_texture_stream" default="RS2_STREAM_COLOR"/>
   <arg name="pointcloud_texture_index"  default="0"/>
 
-  <arg name="enable_sync"               default="false"/>
-  <arg name="align_depth"               default="false"/>
+  <arg name="enable_sync"               default="false"/> <!-- will be set true as long as "pointcloud" is included in filters -->
+  <arg name="align_depth"               default="true"/>
 
   <arg name="filters"                   default="pointcloud,decimation,disparity,spatial,temporal"/>
-  <arg name="clip_distance"             default="-2"/> <!-- max valid distance, default -2 -->
+  <arg name="clip_distance"             default="7"/> <!-- max valid distance, default -2 -->
   <arg name="linear_accel_cov"          default="0.01"/>
   <arg name="initial_reset"             default="false"/>
   <arg name="reconnect_timeout"         default="6.0"/>
@@ -105,7 +105,7 @@
 
   <!-- Loads the camera model -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find realsense2_description)/urdf/test_d435_camera.urdf.xacro' use_nominal_extrinsics:=false"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/> <!-- publish tfs specified by the above urdf, which are internal tfs of d435 -->
 
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find realsense2_description)/rviz/urdf.rviz" required="true"/>
 </launch>
