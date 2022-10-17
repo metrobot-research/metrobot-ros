@@ -1,0 +1,15 @@
+<launch>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find localization)/rviz/localization.rviz"/>
+
+    <!-- TF -->
+    <node pkg="tf" type="static_transform_publisher" name="cali_to_dock" args="0 0.1 0 0 0 0    /cali /dock  10"/><!-- T_calib_dock xyz,zyx 6 T's multiplied from left to right-->
+    <node pkg="tf" type="static_transform_publisher" name="dock_to_right_near" args="1 0 0 0 0 0    /dock /right_near  10"/>
+    <node pkg="tf" type="static_transform_publisher" name="dock_to_left_near" args="-1 0 0 0 0 0    /dock /left_near  10"/>
+    <node pkg="tf" type="static_transform_publisher" name="right_near_to_right_far" args="0 -3 0 0 0 0    /right_near /right_far  10"/>
+    <node pkg="tf" type="static_transform_publisher" name="left_near_to_left_far" args="0 -3 0 0 0 0    /left_near /left_far  10"/>
+
+    <!-- localization_node -->
+    <node pkg="localization" type="localization_node" name="localization_node" output="screen"/>
+
+</launch>

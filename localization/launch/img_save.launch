@@ -1,0 +1,8 @@
+<launch>
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find localization)/rviz/test.rviz"/>
+
+    <node pkg="localization" type="img_save_node" name="img_save_node" output="screen"/>
+
+</launch>

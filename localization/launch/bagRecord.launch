@@ -1,0 +1,19 @@
+<launch>
+    <!--- Sim Time -->
+    <param name="/use_sim_time" value="false" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find localization)/rviz/test.rviz"/>
+
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+
+    <!-- Save Path -->
+<!--    <arg name="bag_path" default="/home/warren/Documents/code/catkin_AstraMiniRGBD/src/localization/data/rosbag/dorm_cali.bag"/>&lt;!&ndash; catkin_ws &ndash;&gt;-->
+    <arg name="bag_path" default="/media/warren/Data/synchronize/pool1121_demo.bag"/><!-- D盘 -->
+
+    <arg name="topic" default="/camera/depth/color/points /camera/color/image_raw"/><!-- 彩色点云 -->
+
+
+    <!-- Record Rosbag -->
+<!--    <node pkg="rosbag" type="record" name="bag_record" args="/camera/depth_registered/points /camera/depth_registered/image /camera/rgb/image_rect_color -o $(arg bag_path)"/>-->
+    <node pkg="rosbag" type="record" name="bag_record" args="$(arg topic) -o $(arg bag_path)"/>
+
+</launch>
