@@ -7,10 +7,10 @@
 
 #include <ros/ros.h>
 // subscriber
-#include "subscriber/img_subscriber.hpp"
+#include "subscriber/dual_img_subscriber.hpp"
+#include "subscriber/tf_listener.hpp"
 // publisher
 #include "publisher/cloud_publisher.hpp"
-#include "publisher/localization_publisher.hpp"
 #include "publisher/pose_publisher.hpp"
 #include "publisher/tf_broadcaster.hpp"
 // sensor data
@@ -24,25 +24,33 @@
 class LocalizationFlow{
 public:
     LocalizationFlow(ros::NodeHandle &nh);
-    void Run();
-    Eigen::Vector3f getCenter(const CloudData &cloud);
-    // EFFECTS: returns the xyz center
 
+    void Run();
+    void SegmentBallThreshold();
+    void SegmentBallKMeans();
+    void BallCloud3DReconstruction();
+    void PublishBallLocation();
 
 private:
+    // node handle
+    ros::NodeHandle nh_;
     // calibration
     Eigen::Matrix3f K;
     // subscriber
-    std::shared_ptr<ImgSubscriber> rgb_sub_ptr_;
-    std::shared_ptr<ImgSubscriber> depth_sub_ptr_;
+    std::shared_ptr<DualImgSubscriber> rgb_d_sub_ptr_;
+    std::shared_ptr<TFListener> tf_listener_ptr_;
     // publisher
-    std::shared_ptr<TFBroadCaster> T_rgbd_ball_broadcast_ptr_;
+    //   for use
+    std::shared_ptr<TFBroadCaster> tf_broadcast_ptr_;
+    //   for rviz
+    std::shared_ptr<CloudPublisher> cloud_pub_ptr_;
 
     // data processing flow
-    std::deque<cv::Mat> rgbBuffer;
-    std::deque<cv::Mat> depthBuffer;
-    cv::Mat current_rgb;
-    cv::Mat current_depth;
+    Eigen::Vector3f cur_d435i_pos;
+    Eigen::Quaternionf cur_d435i_ori;
+    std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> rgb_d_buffer_;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
 
     // ball pos wrt rgbd expressed in rgbd
     Eigen::Vector3f ball_pos;

@@ -10,9 +10,11 @@
   <arg name="initial_reset"             default="false"/>
   <arg name="reconnect_timeout"         default="6.0"/>
 
+  <!-- TODO: rqt_reconfigure params like exposure rates can be specified here with their names as topics in rqt_reconfigure -->
+
   <!-- Cam 1: t265 -->
   <!-- gyro 200 hz, accel 62 hz, pose 200 hz, fisheye 30 hz -->
-  <arg name="camera1_enable_fisheye"            default="false"/>
+  <arg name="camera1_enable_fisheye"            default="true"/>
   <arg name="camera1_fisheye_fps"            default="30"/>
   <arg name="camera1_enable_accel"            default="true"/>
   <arg name="camera1_accel_fps"            default="62"/>
