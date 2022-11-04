@@ -32,8 +32,9 @@ void DualImgSubscriber::msg_callback(const sensor_msgs::ImageConstPtr &msg1,
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    if (cv_ImgPtr1->image.type() == CV_8UC3) // only for RGB image, convert BGR to RGB, grey img is of type CV_8UC1
-        cv::cvtColor(cv_ImgPtr1->image, cv_ImgPtr1->image, cv::COLOR_BGR2RGB);
+    // only when saving imgs, use the following color converter
+//    if (cv_ImgPtr1->image.type() == CV_8UC3) // only for RGB image, convert BGR to RGB, grey img is of type CV_8UC1
+//        cv::cvtColor(cv_ImgPtr1->image, cv_ImgPtr1->image, cv::COLOR_BGR2RGB);
     imgBuffer.emplace_back(cv_ImgPtr1, cv_ImgPtr2);
     buff_mutex_.unlock();
 }

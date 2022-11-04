@@ -33,9 +33,9 @@
   <arg name="camera2_color_width"               default="1280"/>
   <arg name="camera2_color_height"              default="720"/>
   <arg name="camera2_color_fps"              default="30"/>
-  <arg name="camera2_depth_width"               default="1280"/>
-  <arg name="camera2_depth_height"              default="720"/>
-  <arg name="camera2_depth_fps"              default="30"/>
+  <arg name="camera2_depth_width"               default="$(arg camera2_color_width)"/>
+  <arg name="camera2_depth_height"              default="$(arg camera2_color_height)"/>
+  <arg name="camera2_depth_fps"              default="$(arg camera2_color_fps)"/>
   <arg name="camera2_clip_distance"             default="-2"/>
   <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/>
 
@@ -90,5 +90,5 @@
 
   <node pkg="tf" type="static_transform_publisher" name="t265_to_d400" args="0 0.01 -0.028 0 0 0 /$(arg tf_prefix_camera1)_link /$(arg tf_prefix_camera2)_link 100"/> <!-- trans xyz in m, rot zyx in rad, multiplied from left to right -->
 
-  <node pkg="rviz" name="rviz" type="rviz" args="-d $(find realsense2_camera)/rviz/d435i_and_t265.rviz" output="screen"/>
+<!--  <node pkg="rviz" name="rviz" type="rviz" args="-d $(find realsense2_camera)/rviz/d435i_and_t265.rviz" output="screen"/>-->
 </launch>

@@ -1,9 +1,3 @@
-/*
- * @Description: 在ros中发布点云
- * @Author: Ren Qian
- * @Date: 2020-02-05 02:27:30
- */
-
 #ifndef PUBLISHER_CLOUD_PUBLISHER_HPP_
 #define PUBLISHER_CLOUD_PUBLISHER_HPP_
 
@@ -19,18 +13,36 @@ public:
     CloudPublisher(ros::NodeHandle &nh,
                    std::string topic_name,
                    std::string frame_id,
-                   size_t buff_size);
+                   size_t buff_size): nh_(nh), frame_id_(frame_id) {
+        publisher_ = nh_.advertise<sensor_msgs::PointCloud2>(topic_name, buff_size);
+    };
 
     CloudPublisher() = default;
 
-    void Publish(CloudData::CLOUD_PTR &cloud_ptr_input, double time);
+    template<typename Tpoint> // can take pcl::PointCloud<pcl::Pointxxxxx>::ConstPtr as input
+    void Publish(boost::shared_ptr<pcl::PointCloud<Tpoint>> &cloud_ptr_input, ros::Time time){
+        PublishData(cloud_ptr_input, time);
+    };
 
-    void Publish(CloudData::CLOUD_PTR &cloud_ptr_input);
+    template<typename Tpoint>
+    void Publish(boost::shared_ptr<pcl::PointCloud<Tpoint>> &cloud_ptr_input){
+        PublishData(cloud_ptr_input, ros::Time::now());
+    };
 
-    bool HasSubscribers();
+    bool HasSubscribers(){
+        return publisher_.getNumSubscribers() != 0;
+    };
 
 private:
-    void PublishData(CloudData::CLOUD_PTR &cloud_ptr_input, ros::Time time);
+    template<typename Tpoint>
+    void PublishData(boost::shared_ptr<pcl::PointCloud<Tpoint>> &cloud_ptr_input, ros::Time time){
+        sensor_msgs::PointCloud2Ptr cloud_ptr_output(new sensor_msgs::PointCloud2());
+        pcl::toROSMsg(*cloud_ptr_input, *cloud_ptr_output);
+
+        cloud_ptr_output->header.stamp = time;
+        cloud_ptr_output->header.frame_id = frame_id_;
+        publisher_.publish(*cloud_ptr_output);
+    };
 
 private:
     ros::NodeHandle nh_;

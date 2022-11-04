@@ -11,19 +11,21 @@ public:
     TFListener() = default;
 
     //// --------------------lookup latest transform------------------------
-    void lookupTransform(const std::string &parent_frame, const std::string child_frame, Eigen::Vector3f &p, Eigen::Quaternionf &q){
+    void lookupTransform(const std::string &parent_frame, const std::string child_frame, Eigen::Vector3f &p, Eigen::Quaternionf &q, ros::Time &time_get){
         tf_listener_.lookupTransform(parent_frame, child_frame, ros::Time(0), transform);
         p = Eigen::Vector3f(transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
         q = Eigen::Quaternionf(transform.getRotation().w(), transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z());
+        time_get = transform.stamp_;
     };
 
-    void lookupTransformMatrix(const std::string &parent_frame, const std::string child_frame, Eigen::Matrix4f &T){
+    void lookupTransformMatrix(const std::string &parent_frame, const std::string child_frame, Eigen::Matrix4f &T, ros::Time &time_get){
         Eigen::Vector3f p;
         Eigen::Quaternionf q;
-        lookupTransform(parent_frame, child_frame,p,q);
+        lookupTransform(parent_frame, child_frame,p,q, time_get);
         T = Eigen::Matrix4f::Identity();
         T.block<3,3>(0,0) = q.toRotationMatrix();
         T.block<3,1>(0,3) = p;
+        time_get = transform.stamp_;
     };
 
     //// --------------------lookup transform at specified time------------------------

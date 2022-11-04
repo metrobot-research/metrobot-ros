@@ -1,9 +1,0 @@
-<launch>
-
-    <include file="$(find localization)/launch/localization/localization.launch"/>
-
-    <include file="$(find waypoint_trajectory_generator)/launch/test.launch"/>
-
-    <include file="$(find control)/launch/control.launch"/>
-
-</launch>

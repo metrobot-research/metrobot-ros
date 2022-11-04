@@ -1,7 +1,3 @@
-//
-// Created by warren on 2021/10/26.
-//
-
 #ifndef SRC_LOCALIZATION_FLOW_H
 #define SRC_LOCALIZATION_FLOW_H
 
@@ -26,16 +22,17 @@ public:
     LocalizationFlow(ros::NodeHandle &nh);
 
     void Run();
+
     void SegmentBallThreshold();
     void SegmentBallKMeans();
-    void BallCloud3DReconstruction();
-    void PublishBallLocation();
+
+    void GetBallCenter();
 
 private:
     // node handle
     ros::NodeHandle nh_;
     // calibration
-    Eigen::Matrix3f K;
+    Eigen::Matrix3f K_inv;
     // subscriber
     std::shared_ptr<DualImgSubscriber> rgb_d_sub_ptr_;
     std::shared_ptr<TFListener> tf_listener_ptr_;
@@ -48,12 +45,11 @@ private:
     // data processing flow
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
+    ros::Time cur_d435i_time;
     std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> rgb_d_buffer_;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
-
-    // ball pos wrt rgbd expressed in rgbd
-    Eigen::Vector3f ball_pos;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr ball_cloud_ptr;
+    Eigen::Vector3f ball_center;
 
     // timing
 //    std::shared_ptr<TicToc> time_cali;

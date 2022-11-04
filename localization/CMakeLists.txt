@@ -45,9 +45,5 @@ include_directories(
 
 file(GLOB_RECURSE ALL_SRCS "src/*.c*")
 
-
-add_executable(img_save_node node/img_save.cpp ${ALL_SRCS})
-target_link_libraries(img_save_node ${catkin_LIBRARIES} ${ALL_TARGET_LIBRARIES})
-
 add_executable(localization_node node/localization_node.cpp ${ALL_SRCS})
 target_link_libraries(localization_node ${catkin_LIBRARIES} ${ALL_TARGET_LIBRARIES})

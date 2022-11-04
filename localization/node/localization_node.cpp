@@ -3,7 +3,6 @@
 //
 
 #include <ros/ros.h>
-#include "localization_config.h"
 #include "localization_flow.h"
 #include "glog/logging.h"
 #include <yaml-cpp/yaml.h>
@@ -32,11 +31,9 @@ int main(int argc, char *argv[]){
 
     LOG(INFO) << "localization_node/screen: " << screen;
 
-    Config::readConfig();
-
     std::shared_ptr<LocalizationFlow> localization_flow_ptr = std::make_shared<LocalizationFlow>(nh);
 
-    ros::Rate rate(30);
+    ros::Rate rate(6);
     while (ros::ok()) {
         ros::spinOnce();
         localization_flow_ptr->Run();
