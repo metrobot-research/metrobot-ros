@@ -23,8 +23,11 @@ public:
 
     void Run();
 
+    // for use
     void SegmentBallThreshold();
     void SegmentBallKMeans();
+    // for rviz
+    void GenerateFullPointCloud();
 
     void GetBallCenter();
 
@@ -40,7 +43,12 @@ private:
     //   for use
     std::shared_ptr<TFBroadCaster> tf_broadcast_ptr_;
     //   for rviz
-    std::shared_ptr<CloudPublisher> cloud_pub_ptr_;
+    std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
+    std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
+
+    // params
+    float clip_z_dis[2]; // min, max in meters, according to datasheet
+    uint8_t threshold;
 
     // data processing flow
     Eigen::Vector3f cur_d435i_pos;
@@ -48,8 +56,12 @@ private:
     ros::Time cur_d435i_time;
     std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> rgb_d_buffer_;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr ball_cloud_ptr;
+    // for use
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
     Eigen::Vector3f ball_center;
+    // for rviz
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr full_cloud_ptr;
+
 
     // timing
 //    std::shared_ptr<TicToc> time_cali;
