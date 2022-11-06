@@ -12,6 +12,7 @@
 // sensor data
 #include <sensor_msgs/CameraInfo.h>
 #include "sensor_data/cloud_data.hpp"
+#include "sensor_data/dual_img_stamped.hpp"
 // yaml
 #include <yaml-cpp/yaml.h>
 // tools
@@ -57,7 +58,7 @@ private:
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
     ros::Time cur_d435i_time;
-    std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> rgb_d_buffer_;
+    std::deque<DualImgStamped> rgb_d_buffer_;
 
     // for use
     pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;

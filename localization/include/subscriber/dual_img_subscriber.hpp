@@ -9,6 +9,7 @@
 #include <message_filters/time_synchronizer.h>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
+#include "sensor_data/dual_img_stamped.hpp"
 
 
 
@@ -18,7 +19,7 @@ public:
 
     DualImgSubscriber() = default;
 
-    void ParseData(std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> &target_imgBuffer);
+    void ParseData(std::deque<DualImgStamped> &target_imgBuffer);
 
 private:
     void msg_callback(const sensor_msgs::ImageConstPtr &msg1, const sensor_msgs::ImageConstPtr &msg2);
@@ -27,7 +28,7 @@ private:
     message_filters::Subscriber<sensor_msgs::Image> sub_1;
     message_filters::Subscriber<sensor_msgs::Image> sub_2;
     message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> sync_;
-    std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> imgBuffer;
+    std::deque<DualImgStamped> imgStampedBuffer;
 
     std::mutex buff_mutex_;
 };

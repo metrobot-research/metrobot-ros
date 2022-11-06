@@ -10,11 +10,11 @@ DualImgSubscriber::DualImgSubscriber(ros::NodeHandle &nh, std::string topic1, st
 }
 
 void DualImgSubscriber::ParseData(
-        std::deque<std::pair<cv_bridge::CvImageConstPtr, cv_bridge::CvImageConstPtr>> &target_imgBuffer) {
+        std::deque<DualImgStamped> &target_imgBuffer) {
     buff_mutex_.lock();
-    if(!imgBuffer.empty()){
-        target_imgBuffer.insert(target_imgBuffer.end(), imgBuffer.begin(), imgBuffer.end());
-        imgBuffer.clear();
+    if(!imgStampedBuffer.empty()){
+        target_imgBuffer.insert(target_imgBuffer.end(), imgStampedBuffer.begin(), imgStampedBuffer.end());
+        imgStampedBuffer.clear();
     }
     buff_mutex_.unlock();
 }
@@ -35,6 +35,7 @@ void DualImgSubscriber::msg_callback(const sensor_msgs::ImageConstPtr &msg1,
     // only when saving imgs, use the following color converter
 //    if (cv_ImgPtr1->image.type() == CV_8UC3) // only for RGB image, convert BGR to RGB, grey img is of type CV_8UC1
 //        cv::cvtColor(cv_ImgPtr1->image, cv_ImgPtr1->image, cv::COLOR_BGR2RGB);
-    imgBuffer.emplace_back(cv_ImgPtr1, cv_ImgPtr2);
+    DualImgStamped new_dual_img_stamped = {msg1->header.stamp, cv_ImgPtr1, cv_ImgPtr2};
+    imgStampedBuffer.push_back(new_dual_img_stamped);
     buff_mutex_.unlock();
 }

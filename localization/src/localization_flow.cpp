@@ -5,7 +5,6 @@
 #include "global_definition/global_definition.h"
 
 #include <opencv2/highgui/highgui.hpp>
-
 #include <pcl/io/pcd_io.h>
 
 //#define CHECK_POINTCLOUD
@@ -48,20 +47,21 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
 
 
 void LocalizationFlow::Run(){
-    // ReadData
-    try{
-        tf_listener_ptr_->lookupTransform("/t265_odom_frame", "/d435i_color_optical_frame", cur_d435i_pos, cur_d435i_ori, cur_d435i_time);
-    }catch(tf2::LookupException &exc){ // wait until the camera boot node has fully started
-        return;
-    }catch(tf2::ConnectivityException &exc){
-        return;
-    }catch(tf2::ExtrapolationException &exc){
-        return;
-    }
-
     rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
 
-    while(!rgb_d_buffer_.empty()){ // HasData
+    while(!rgb_d_buffer_.empty()){
+        cur_d435i_time = rgb_d_buffer_.back().time;
+
+        try{
+            tf_listener_ptr_->lookupTransform("/t265_odom_frame", "/d435i_color_optical_frame", cur_d435i_time, cur_d435i_pos, cur_d435i_ori);
+        }catch(tf2::LookupException &exc){ // wait until the camera boot node has fully started
+            return;
+        }catch(tf2::ConnectivityException &exc){
+            return;
+        }catch(tf2::ExtrapolationException &exc){
+            return;
+        }
+
 #ifdef CHECK_POINTCLOUD
         // Publish the whole point cloud for checking with Realsense point cloud.
         // Remember to enable "pointcloud" filter to publish Realsense point cloud
@@ -92,8 +92,8 @@ void LocalizationFlow::Run(){
 }
 
 void LocalizationFlow::SegmentBallThreshold(){
-    cv_bridge::CvImageConstPtr rgb_ptr = rgb_d_buffer_.back().first;
-    cv_bridge::CvImageConstPtr depth_ptr = rgb_d_buffer_.back().second;
+    cv_bridge::CvImageConstPtr rgb_ptr = rgb_d_buffer_.back().img1_ptr;
+    cv_bridge::CvImageConstPtr depth_ptr = rgb_d_buffer_.back().img2_ptr;
 
     for(int i = 0; i < depth_ptr->image.rows; i++){
         for(int j = 0; j < depth_ptr->image.cols; j++){
@@ -121,8 +121,8 @@ void LocalizationFlow::SegmentBallThreshold(){
 void LocalizationFlow::SegmentBallKMeans(){}
 
 void LocalizationFlow::GenerateFullPointCloud(){
-    cv_bridge::CvImageConstPtr rgb_ptr = rgb_d_buffer_.back().first;
-    cv_bridge::CvImageConstPtr depth_ptr = rgb_d_buffer_.back().second;
+    cv_bridge::CvImageConstPtr rgb_ptr = rgb_d_buffer_.back().img1_ptr;
+    cv_bridge::CvImageConstPtr depth_ptr = rgb_d_buffer_.back().img2_ptr;
 
 //    LOG(INFO) << depth_ptr->image.depth() << ", " << depth_ptr->image.channels();
 
