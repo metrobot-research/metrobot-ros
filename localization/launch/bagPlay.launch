@@ -1,9 +1,0 @@
-<launch>
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find localization)/rviz/test.rviz"/>
-
-    <arg name="bag" default="/media/warren/Data/synchronize/pool1110.bag"/><!-- D盘 -->
-
-    <arg name="topic" default="/camera/depth/color/points"/><!-- 彩色点云 -->
-
-    <node pkg="rosbag" type="play" name="rosbag" args="--pause --clock $(arg bag) -r 5 -s 0 --topic $(arg topic)"/>
-</launch>

@@ -49,7 +49,7 @@ private:
 
     // params
     float clip_z_dis[2]; // min, max in meters, according to datasheet
-    uint8_t threshold;
+    uint8_t bright_threshold;
 
     // data processing flow
     bool found_ball;
@@ -57,7 +57,7 @@ private:
     Eigen::Vector3f ball_center_pred; // in d345i frame
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
-    ros::Time cur_d435i_time;
+    DualImgStamped cur_rgbd_stamped;
     std::deque<DualImgStamped> rgb_d_buffer_;
 
     // for use
