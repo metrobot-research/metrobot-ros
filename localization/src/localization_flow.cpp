@@ -18,6 +18,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
     threshold(200),
+    found_ball(false),
     full_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>()),
     ball_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>()){
     Eigen::Matrix3f K;
@@ -25,15 +26,15 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
      * use align depth to color's K, which is the same as the K of color
      * different resolution, align_depth on/off  -->  different K */
     //// 1280 * 720
-//    K << 921.568359375, 0.0, 643.44873046875,
-//         0.0, 919.7422485351562, 379.1036071777344,
-//         0.0, 0.0, 1.0;
-//    clip_z_dis[0] = 0.28;
-    //// 848 * 480
-    K << 614.37890625, 0.0, 426.29913330078125,
-         0.0, 613.1614990234375, 252.73573303222656,
+    K << 921.568359375, 0.0, 643.44873046875,
+         0.0, 919.7422485351562, 379.1036071777344,
          0.0, 0.0, 1.0;
-    clip_z_dis[0] = 0.195;
+    clip_z_dis[0] = 0.28;
+    //// 848 * 480
+//    K << 614.37890625, 0.0, 426.29913330078125,
+//         0.0, 613.1614990234375, 252.73573303222656,
+//         0.0, 0.0, 1.0;
+//    clip_z_dis[0] = 0.195;
     //// 640 * 360
 //    K << 460.7841796875, 0.0, 321.724365234375,
 //         0.0, 459.8711242675781, 189.5518035888672,
@@ -75,11 +76,18 @@ void LocalizationFlow::Run(){
 //        SegmentBallKMeans();
 
         rgb_d_buffer_.clear();
-        ball_cloud_pub_ptr_->Publish(ball_cloud_ptr); // Publish segmented ball cloud, for visualize only
 
-        GetBallCenter(); // result stored in "ball_center", wrt world coordinate, expressed in world coordinate
-        // Publish ball tf with orientation set to identity for convenience
-        tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real", ball_center, Eigen::Quaternionf::Identity(), cur_d435i_time);
+        if(!ball_cloud_ptr->empty()){
+            found_ball = true;
+
+            ball_cloud_pub_ptr_->Publish(ball_cloud_ptr); // Publish segmented ball cloud, for visualize only
+            GetBallCenter(); // result stored in "ball_center", wrt world coordinate, expressed in world coordinate
+            // Publish ball tf with orientation set to identity for convenience
+            tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real", ball_center, Eigen::Quaternionf::Identity(), cur_d435i_time);
+
+            prev_d435i_pos_wth_ball = cur_d435i_pos;
+            prev_d435i_ori_wth_ball = cur_d435i_ori;
+        }
 #endif
     }
 }
@@ -151,15 +159,38 @@ void LocalizationFlow::GenerateFullPointCloud(){
 //    pcl::io::savePCDFileASCII (cloud_path, *ball_cloud_ptr);
 }
 
-void LocalizationFlow::GetBallCenter(){
-    // Get center of ball in d435i coordinate
+void LocalizationFlow::GetBallCenter(){ // Get center of ball in d435i coordinate
     ball_center.setZero();
-    size_t size = ball_cloud_ptr->size();
+
+    // remove rgbd mismatched background points that are viewed as ball
+    // background points are much further away than ball points
+    float min_z_dis = 100;
+    float max_z_dis = 0;
+    float rmv_thres = 100;
     for(const auto &iter : ball_cloud_ptr->points){
-        ball_center(0) += iter.x / size;
-        ball_center(1) += iter.y / size;
-        ball_center(2) += iter.z / size;
+        if(iter.z < min_z_dis)
+            min_z_dis = iter.z;
+        if(iter.z > max_z_dis)
+            max_z_dis = iter.z;
     }
+    if(max_z_dis - min_z_dis > 0.2)
+        rmv_thres = (min_z_dis + max_z_dis) / 2;
+
+    // remove points too far from predicted ball pos wrt d435i frame
+
+
+    size_t size = 0;
+    for(const auto &iter : ball_cloud_ptr->points){
+        if(iter.z < rmv_thres){
+            ball_center(0) += iter.x;
+            ball_center(1) += iter.y;
+            ball_center(2) += iter.z;
+            size++;
+        }
+    }
+    ball_center(0) = ball_center(0) / size;
+    ball_center(1) = ball_center(1) / size;
+    ball_center(2) = ball_center(2) / size;
 
     // Transform ball position to world coordinate
     ball_center = cur_d435i_pos + cur_d435i_ori.toRotationMatrix() * ball_center;

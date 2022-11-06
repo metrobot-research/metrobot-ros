@@ -1,8 +1,8 @@
 <launch>
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
-        <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
-        <arg name="camera2_color_height"              default="480"/>
-        <arg name="camera2_color_fps"                 default="60"/> <!-- Remember to change ROS node frequency -->
+        <arg name="camera2_color_width"               default="1280"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
+        <arg name="camera2_color_height"              default="720"/>
+        <arg name="camera2_color_fps"                 default="30"/> <!-- Remember to change ROS node frequency -->
         <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     </include>
 

@@ -51,6 +51,10 @@ private:
     uint8_t threshold;
 
     // data processing flow
+    bool found_ball;
+    Eigen::Vector3f prev_d435i_pos_wth_ball;
+    Eigen::Quaternionf prev_d435i_ori_wth_ball;
+    Eigen::Vector3f prev_ball_center;
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
     ros::Time cur_d435i_time;
