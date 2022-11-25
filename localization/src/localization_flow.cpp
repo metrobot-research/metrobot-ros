@@ -16,7 +16,8 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     tf_broadcast_ptr_(std::make_shared<TFBroadCaster>()),
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
-    bright_threshold(200),
+    bright_thres(150),
+    pred_thres(0.4),
     found_ball(false),
     full_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>()),
     ball_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>()){
@@ -101,7 +102,7 @@ void LocalizationFlow::SegmentBallThreshold(){
                 uint8_t bgr[3] = {rgb_ptr->image.at<cv::Vec3b>(i,j)[0],
                                    rgb_ptr->image.at<cv::Vec3b>(i,j)[1],
                                    rgb_ptr->image.at<cv::Vec3b>(i,j)[2]}; // fixme: guess it's bgr here, output full cloud is correct because during publishing there's a conversion, where rgb are assigned to bgr
-                if(bgr[0] > bright_threshold && bgr[1] > bright_threshold && bgr[2] > bright_threshold){
+                if(sqrt((bgr[0]*bgr[0] + bgr[1]*bgr[1] + bgr[2]*bgr[2]) / 3.) > bright_thres){
                     Eigen::Vector3f point(float(j), float(i), 1.); // Image i,j is optical_frame y,x, not x,y! Invert them when going to point cloud
                     point = point * float(depth_ptr->image.at<uint16_t>(i,j)) * 0.001;
                     if(point.z() < clip_z_dis[0] || point.z() > clip_z_dis[1]) // clip out invalid points, K_inv does not change z coord
@@ -112,7 +113,7 @@ void LocalizationFlow::SegmentBallThreshold(){
                         // remove points too far from predicted ball pos wrt d435i according to tracking camera
                         ball_center_pred = cur_d435i_ori.inverse() * (prev_ball_center - cur_d435i_pos); // in d435i frame, fixme: assuming ball is static wrt world frame
                                                                                                          // fixme: difficult to distract, but once distracted, lost forever
-                        if((point - ball_center_pred).norm() < 0.2){
+                        if((point - ball_center_pred).norm() < pred_thres){
                             pcl::PointXYZ pcl_pxyz(point.x(), point.y(), point.z());
                             ball_cloud_ptr->push_back(pcl_pxyz);
                         }

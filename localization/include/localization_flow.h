@@ -49,7 +49,8 @@ private:
 
     // params
     float clip_z_dis[2]; // min, max in meters, according to datasheet
-    uint8_t bright_threshold;
+    uint8_t bright_thres;
+    float pred_thres;
 
     // data processing flow
     bool found_ball;
