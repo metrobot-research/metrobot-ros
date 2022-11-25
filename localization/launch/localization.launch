@@ -1,13 +1,32 @@
 <launch>
+    <arg name="camera2_color_width"               default="640"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
+    <arg name="camera2_color_height"              default="480"/>
+    <arg name="camera2_color_fps"                 default="6"/> <!-- Remember to change ROS node frequency -->
+    <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
+    <arg name="camera2_clip_distance"             default="-2"/>
+    <arg name="H_MIN" default="78"/>
+    <arg name="H_MAX" default="96"/>
+    <arg name="S_MIN" default="68"/>
+    <arg name="S_MAX" default="164"/>
+    <arg name="V_MIN" default="39"/>
+    <arg name="V_MAX" default="223"/>
+
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
-        <arg name="camera2_color_width"               default="1280"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
-        <arg name="camera2_color_height"              default="720"/>
-        <arg name="camera2_color_fps"                 default="30"/> <!-- Remember to change ROS node frequency -->
-        <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
-        <arg name="camera2_clip_distance"             default="-2"/>
+        <arg name="camera2_color_width"               default="$(arg camera2_color_width)"/>
+        <arg name="camera2_color_height"              default="$(arg camera2_color_height)"/>
+        <arg name="camera2_color_fps"                 default="$(arg camera2_color_fps)"/>
+        <arg name="camera2_filters"              default="$(arg camera2_filters)"/>
+        <arg name="camera2_clip_distance"             default="$(arg camera2_clip_distance)"/>
     </include>
 
-    <node pkg="localization" type="localization_node" name="localization_node" output="screen"/>
+    <node pkg="localization" type="localization_node" name="localization_node" output="screen">
+        <param name="H_MIN" value="$(arg H_MIN)"/>
+        <param name="H_MAX" value="$(arg H_MAX)"/>
+        <param name="S_MIN" value="$(arg S_MIN)"/>
+        <param name="S_MAX" value="$(arg S_MAX)"/>
+        <param name="V_MIN" value="$(arg V_MIN)"/>
+        <param name="V_MAX" value="$(arg V_MAX)"/>
+    </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>
 

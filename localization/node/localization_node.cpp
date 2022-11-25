@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 
     std::shared_ptr<LocalizationFlow> localization_flow_ptr = std::make_shared<LocalizationFlow>(nh);
 
-    ros::Rate rate(30);
+    ros::Rate rate(6);
     while (ros::ok()) {
         ros::spinOnce();
         localization_flow_ptr->Run();
