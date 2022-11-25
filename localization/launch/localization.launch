@@ -1,15 +1,33 @@
 <launch>
     <arg name="camera2_color_width"               default="640"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
     <arg name="camera2_color_height"              default="480"/>
-    <arg name="camera2_color_fps"                 default="6"/> <!-- Remember to change ROS node frequency -->
+    <arg name="camera2_color_fps"                 default="15"/> <!-- Remember to change ROS node frequency -->
     <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
+    <!-- Ball Thresholding -->
+    <arg name="ball_thres_method" default="HSV"/>
+    <!--   HSV -->
     <arg name="H_MIN" default="78"/>
     <arg name="H_MAX" default="96"/>
     <arg name="S_MIN" default="68"/>
     <arg name="S_MAX" default="164"/>
     <arg name="V_MIN" default="39"/>
     <arg name="V_MAX" default="223"/>
+    <!--   RGB -->
+    <arg name="R_MIN" default="0"/>
+    <arg name="R_MAX" default="256"/>
+    <arg name="G_MIN" default="0"/>
+    <arg name="G_MAX" default="256"/>
+    <arg name="B_MIN" default="0"/>
+    <arg name="B_MAX" default="256"/>
+    <!-- obj filtering-->
+    <arg name="useMorphOps" default="true"/>
+    <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
+    <arg name="min_obj_pix_diam" default="20"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
+    <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
+    <arg name="dilate_diam" default="10"/> <!--pix elements larger than this will be dilated-->
+
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
         <arg name="camera2_color_width"               default="$(arg camera2_color_width)"/>
@@ -20,12 +38,29 @@
     </include>
 
     <node pkg="localization" type="localization_node" name="localization_node" output="screen">
+        <!-- Ball Thresholding -->
+        <param name="ball_thres_method" value="$(arg ball_thres_method)"/>
+        <!-- HSV -->
         <param name="H_MIN" value="$(arg H_MIN)"/>
         <param name="H_MAX" value="$(arg H_MAX)"/>
         <param name="S_MIN" value="$(arg S_MIN)"/>
         <param name="S_MAX" value="$(arg S_MAX)"/>
         <param name="V_MIN" value="$(arg V_MIN)"/>
         <param name="V_MAX" value="$(arg V_MAX)"/>
+        <!-- RGB -->
+        <param name="R_MIN" value="$(arg R_MIN)"/>
+        <param name="R_MAX" value="$(arg R_MAX)"/>
+        <param name="G_MIN" value="$(arg G_MIN)"/>
+        <param name="G_MAX" value="$(arg G_MAX)"/>
+        <param name="B_MIN" value="$(arg B_MIN)"/>
+        <param name="B_MAX" value="$(arg B_MAX)"/>
+        <!-- object filtering -->
+        <param name="useMorphOps" value="$(arg useMorphOps)"/>
+        <param name="erode_diam" value="$(arg erode_diam)"/>
+        <param name="dilate_diam" value="$(arg dilate_diam)"/>
+        <param name="max_num_objs" value="$(arg max_num_objs)"/>
+        <param name="min_obj_pix_diam" value="$(arg min_obj_pix_diam)"/>
+        <param name="max_obj_percentage" value="$(arg max_obj_percentage)"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>

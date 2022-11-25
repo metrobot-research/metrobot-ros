@@ -31,6 +31,7 @@ public:
     void GenerateFullPointCloud();
 
     // for use
+    void updateParams();
     void SegmentBallThreshold();
     void GetBallCenter();
 
@@ -61,22 +62,34 @@ private:
 
     // params
     float clip_z_dis[2]; // min, max in meters, according to datasheet
-    bool trackObjects = true;
-    bool useMorphOps = true;
+    //  frame size
+    int FRAME_WIDTH = 640;
+    int FRAME_HEIGHT = 480;
+    //  ball thresholding
+    string ball_thres_method = "HSV";
     int H_MIN = 0;
     int H_MAX = 256;
     int S_MIN = 0;
     int S_MAX = 256;
     int V_MIN = 0;
     int V_MAX = 256;
-    //default capture width and height
-    int FRAME_WIDTH;
-    int FRAME_HEIGHT;
-    //max number of objects to be detected in frame
-    const int MAX_NUM_OBJECTS=50;
-    //minimum and maximum object area
-    const int MIN_OBJECT_AREA = 20*20;
-    const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH/1.5;
+    int R_MIN = 0;
+    int R_MAX = 256;
+    int G_MIN = 0;
+    int G_MAX = 256;
+    int B_MIN = 0;
+    int B_MAX = 256;
+    //  object filtering
+    bool trackObjects = true;
+    bool useMorphOps = true;
+    int ERODE_DIAM = 3;
+    int DILATE_DIAM = 8;
+    int MAX_NUM_OBJECTS=50; //max number of objects to be detected in frame
+    int MIN_OBJ_PIX_DIAM = 20;
+    int MIN_OBJECT_AREA = MIN_OBJ_PIX_DIAM * MIN_OBJ_PIX_DIAM;
+    int MAX_OBJ_PERCENTAGE = 70;
+    int MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
+
     //names that will appear at the top of each window
     const string windowName = "Original Image";
     const string windowName1 = "HSV Image";

@@ -45,22 +45,45 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     nh_.getParam("camera2_clip_distance", clip_z_dis[1]);
     if(clip_z_dis[1] < 0)
         clip_z_dis[1] = 30;
+    // frame size
+    nh_.getParam("camera2_color_width", FRAME_WIDTH);
+    nh_.getParam("camera2_color_height", FRAME_HEIGHT);
+    // ball thresholding
+    nh_.getParam("ball_thres_method", ball_thres_method);
+    //   HSV
     nh_.getParam("H_MIN", H_MIN);
     nh_.getParam("H_MAX", H_MAX);
     nh_.getParam("S_MIN", S_MIN);
     nh_.getParam("S_MAX", S_MAX);
     nh_.getParam("V_MIN", V_MIN);
     nh_.getParam("V_MAX", V_MAX);
-    nh_.getParam("camera2_color_width", FRAME_WIDTH);
-    nh_.getParam("camera2_color_height", FRAME_HEIGHT);
+    //   RGB
+    nh_.getParam("R_MIN", R_MIN);
+    nh_.getParam("R_MAX", R_MAX);
+    nh_.getParam("G_MIN", G_MIN);
+    nh_.getParam("G_MAX", G_MAX);
+    nh_.getParam("B_MIN", B_MIN);
+    nh_.getParam("B_MAX", B_MAX);
+    // obj filtering
+    nh_.getParam("useMorphOps", useMorphOps);
+    nh_.getParam("erode_diam", ERODE_DIAM);
+    nh_.getParam("dilate_diam", DILATE_DIAM);
+    nh_.getParam("max_num_objs", MAX_NUM_OBJECTS); // for noise detection, too many obj -> too large noise
+    nh_.getParam("min_obj_pix_diam", MIN_OBJ_PIX_DIAM);
+    nh_.getParam("max_obj_percentaage", MAX_OBJ_PERCENTAGE);
+    MIN_OBJECT_AREA = MIN_OBJ_PIX_DIAM * MIN_OBJ_PIX_DIAM;
+    MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
 
     K_inv = K.inverse();
+
+    //create slider bars for HSV filtering
+    createTrackbars();
 }
 
 
 
 void LocalizationFlow::Run(){
-    time_run->tic();
+//    time_run->tic();
     rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
 
     if(!rgb_d_buffer_.empty()){
@@ -84,6 +107,8 @@ void LocalizationFlow::Run(){
         GenerateFullPointCloud();
         full_cloud_pub_ptr_->Publish(full_cloud_ptr, cur_rgbd_stamped.time);
 #else
+        updateParams();
+
         SegmentBallThreshold();
 //        SegmentBallKMeans();
 
@@ -98,7 +123,7 @@ void LocalizationFlow::Run(){
         }
 #endif
     }
-    time_run->toc();
+//    time_run->toc();
 }
 
 void LocalizationFlow::GenerateFullPointCloud(){
@@ -139,6 +164,11 @@ void LocalizationFlow::GenerateFullPointCloud(){
 //    pcl::io::savePCDFileASCII (cloud_path, *ball_cloud_ptr);
 }
 
+void LocalizationFlow::updateParams(){
+    MIN_OBJECT_AREA = MIN_OBJ_PIX_DIAM * MIN_OBJ_PIX_DIAM;
+    MAX_OBJECT_AREA = FRAME_WIDTH * FRAME_HEIGHT * MAX_OBJ_PERCENTAGE / 100.;
+}
+
 void LocalizationFlow::SegmentBallThreshold(){
     ball_cloud_ptr->clear();
 
@@ -153,13 +183,18 @@ void LocalizationFlow::SegmentBallThreshold(){
     cv::Mat imgThresed;
     //x and y values for the location of the object
     int x=0, y=0;
-    //create slider bars for HSV filtering
-    createTrackbars();
 
-    cvtColor(rgb_ptr->image, imgHSV,COLOR_BGR2HSV);
-    //filter HSV image between values and store filtered image to
-    //threshold matrix
-    inRange(imgHSV,cv::Scalar(H_MIN,S_MIN,V_MIN),cv::Scalar(H_MAX,S_MAX,V_MAX),imgThresed);
+    if(ball_thres_method == "HSV"){
+        cvtColor(rgb_ptr->image, imgHSV,COLOR_BGR2HSV);
+        //filter HSV image between values and store filtered image to
+        //threshold matrix
+        inRange(imgHSV,cv::Scalar(H_MIN,S_MIN,V_MIN),cv::Scalar(H_MAX,S_MAX,V_MAX),imgThresed);
+    }else if(ball_thres_method == "RGB"){
+        inRange(rgb_ptr->image,cv::Scalar(B_MIN,G_MIN,R_MIN),cv::Scalar(B_MAX,G_MAX,R_MAX),imgThresed);
+    }else{
+        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
+        return;
+    }
     //perform morphological operations on thresholded image to eliminate noise
     //and emphasize the filtered object(s)
     if(useMorphOps)
@@ -173,7 +208,9 @@ void LocalizationFlow::SegmentBallThreshold(){
     //show frames
     imshow(windowName2,imgThresed);
     imshow(windowName,cameraFeed);
-    imshow(windowName1,imgHSV);
+    if(ball_thres_method == "HSV")
+        imshow(windowName1,imgHSV);
+
     waitKey(30); //fixme: only used for window visualization, remove this for final application
 
     //TODO: create ball cloud using imgThresed, depth_ptr, K_inv
@@ -233,29 +270,61 @@ std::string LocalizationFlow::intToString(int number){
 
 void LocalizationFlow::createTrackbars(){
     //create window for trackbars
-
     namedWindow(trackbarWindowName,0);
     //create memory to store trackbar name on window
     char TrackbarName[50];
-    sprintf( TrackbarName, "H_MIN", H_MIN);
-    sprintf( TrackbarName, "H_MAX", H_MAX);
-    sprintf( TrackbarName, "S_MIN", S_MIN);
-    sprintf( TrackbarName, "S_MAX", S_MAX);
-    sprintf( TrackbarName, "V_MIN", V_MIN);
-    sprintf( TrackbarName, "V_MAX", V_MAX);
+    if(ball_thres_method == "HSV"){
+        sprintf( TrackbarName, "H_MIN", H_MIN);
+        sprintf( TrackbarName, "H_MAX", H_MAX);
+        sprintf( TrackbarName, "S_MIN", S_MIN);
+        sprintf( TrackbarName, "S_MAX", S_MAX);
+        sprintf( TrackbarName, "V_MIN", V_MIN);
+        sprintf( TrackbarName, "V_MAX", V_MAX);
+    }else if(ball_thres_method == "RGB"){
+        sprintf( TrackbarName, "R_MIN", R_MIN);
+        sprintf( TrackbarName, "R_MAX", R_MAX);
+        sprintf( TrackbarName, "G_MIN", G_MIN);
+        sprintf( TrackbarName, "G_MAX", G_MAX);
+        sprintf( TrackbarName, "B_MIN", B_MIN);
+        sprintf( TrackbarName, "B_MAX", B_MAX);
+    }else{
+        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
+        return;
+    }
+    sprintf( TrackbarName, "ERODE_DIAM", ERODE_DIAM);
+    sprintf( TrackbarName, "DILATE_DIAM", DILATE_DIAM);
+    sprintf( TrackbarName, "MAX_NUM_OBJECTS", MAX_NUM_OBJECTS);
+    sprintf( TrackbarName, "MIN_OBJ_PIX_DIAM", MIN_OBJ_PIX_DIAM);
+    sprintf( TrackbarName, "MAX_OBJ_PERCENTAGE", MAX_OBJ_PERCENTAGE);
+
     //create trackbars and insert them into window
     //3 parameters are: the address of the variable that is changing when the trackbar is moved(eg.H_LOW),
     //the max value the trackbar can move (eg. H_HIGH),
     //and the function that is called whenever the trackbar is moved(eg. on_trackbar)
     //                                  ---->    ---->     ---->
-    createTrackbar( "H_MIN", trackbarWindowName, &H_MIN, H_MAX, on_trackbar );
-    createTrackbar( "H_MAX", trackbarWindowName, &H_MAX, H_MAX, on_trackbar );
-    createTrackbar( "S_MIN", trackbarWindowName, &S_MIN, S_MAX, on_trackbar );
-    createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar );
-    createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar );
-    createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar );
-
-
+    if(ball_thres_method == "HSV"){
+        createTrackbar( "H_MIN", trackbarWindowName, &H_MIN, 256, on_trackbar );
+        createTrackbar( "H_MAX", trackbarWindowName, &H_MAX, 256, on_trackbar );
+        createTrackbar( "S_MIN", trackbarWindowName, &S_MIN, 256, on_trackbar );
+        createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, 256, on_trackbar );
+        createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, 256, on_trackbar );
+        createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, 256, on_trackbar );
+    }else if(ball_thres_method == "RGB"){
+        createTrackbar( "R_MIN", trackbarWindowName, &R_MIN, 256, on_trackbar );
+        createTrackbar( "R_MAX", trackbarWindowName, &R_MAX, 256, on_trackbar );
+        createTrackbar( "G_MIN", trackbarWindowName, &G_MIN, 256, on_trackbar );
+        createTrackbar( "G_MAX", trackbarWindowName, &G_MAX, 256, on_trackbar );
+        createTrackbar( "B_MIN", trackbarWindowName, &B_MIN, 256, on_trackbar );
+        createTrackbar( "B_MAX", trackbarWindowName, &B_MAX, 256, on_trackbar );
+    }else{
+        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
+        return;
+    }
+    createTrackbar( "ERODE_DIAM", trackbarWindowName, &ERODE_DIAM, 30, on_trackbar );
+    createTrackbar( "DILATE_DIAM", trackbarWindowName, &DILATE_DIAM, FRAME_HEIGHT, on_trackbar );
+    createTrackbar( "MAX_NUM_OBJECTS", trackbarWindowName, &MAX_NUM_OBJECTS, 50, on_trackbar );
+    createTrackbar( "MIN_OBJ_PIX_DIAM", trackbarWindowName, &MIN_OBJ_PIX_DIAM, 1, on_trackbar );
+    createTrackbar( "MAX_OBJ_OCCUPATION", trackbarWindowName, &MAX_OBJ_PERCENTAGE, 100, on_trackbar );
 }
 
 void LocalizationFlow::drawObject(int x, int y, Mat &frame){
@@ -290,19 +359,15 @@ void LocalizationFlow::morphOps(cv::Mat &thresh){
     //create structuring element that will be used to "dilate" and "erode" image.
     //the element chosen here is a 3px by 3px rectangle
 
-    Mat erodeElement = getStructuringElement( MORPH_RECT,Size(3,3));
+    Mat erodeElement = getStructuringElement( MORPH_RECT,Size(ERODE_DIAM,ERODE_DIAM));
     //dilate with larger element so make sure object is nicely visible
-    Mat dilateElement = getStructuringElement( MORPH_RECT,Size(8,8));
+    Mat dilateElement = getStructuringElement( MORPH_RECT,Size(DILATE_DIAM,DILATE_DIAM));
 
     erode(thresh,thresh,erodeElement);
     erode(thresh,thresh,erodeElement);
 
-
     dilate(thresh,thresh,dilateElement);
-    dilate(thresh,thresh,dilateElement);
-
-
-
+//    dilate(thresh,thresh,dilateElement);
 }
 
 void LocalizationFlow::trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed){
@@ -319,6 +384,7 @@ void LocalizationFlow::trackFilteredObject(int &x, int &y, Mat threshold, Mat &c
     bool objectFound = false;
     if (hierarchy.size() > 0) {
         int numObjects = hierarchy.size();
+//        LOG(INFO) << "numObjects: " << numObjects;
         //if number of objects greater than MAX_NUM_OBJECTS we have a noisy filter
         if(numObjects<MAX_NUM_OBJECTS){
             for (int index = 0; index >= 0; index = hierarchy[index][0]) {
