@@ -33,7 +33,9 @@ int main(int argc, char *argv[]){
 
     std::shared_ptr<LocalizationFlow> localization_flow_ptr = std::make_shared<LocalizationFlow>(nh);
 
-    ros::Rate rate(15);
+    double fps;
+    nh.getParam("camera2_color_fps", fps);
+    ros::Rate rate(fps);
     while (ros::ok()) {
         ros::spinOnce();
         localization_flow_ptr->Run();

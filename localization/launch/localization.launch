@@ -1,18 +1,22 @@
 <launch>
-    <arg name="camera2_color_width"               default="640"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
+    <!--visualization-->
+    <arg name="cv_vis" default="false"/>
+    <arg name="check_point_cloud" default="false"/>
+    <!--cam params-->
+    <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
     <arg name="camera2_color_height"              default="480"/>
-    <arg name="camera2_color_fps"                 default="15"/> <!-- Remember to change ROS node frequency -->
-    <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
+    <arg name="camera2_color_fps"                 default="60"/> <!-- Remember to change ROS node frequency -->
+    <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
     <!-- Ball Thresholding -->
     <arg name="ball_thres_method" default="HSV"/>
     <!--   HSV -->
     <arg name="H_MIN" default="78"/>
-    <arg name="H_MAX" default="96"/>
-    <arg name="S_MIN" default="68"/>
+    <arg name="H_MAX" default="99"/>
+    <arg name="S_MIN" default="86"/>
     <arg name="S_MAX" default="164"/>
-    <arg name="V_MIN" default="39"/>
-    <arg name="V_MAX" default="223"/>
+    <arg name="V_MIN" default="62"/>
+    <arg name="V_MAX" default="233"/>
     <!--   RGB -->
     <arg name="R_MIN" default="0"/>
     <arg name="R_MAX" default="256"/>
@@ -22,11 +26,12 @@
     <arg name="B_MAX" default="256"/>
     <!-- obj filtering-->
     <arg name="useMorphOps" default="true"/>
-    <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
-    <arg name="min_obj_pix_diam" default="20"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
-    <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
     <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
     <arg name="dilate_diam" default="10"/> <!--pix elements larger than this will be dilated-->
+    <arg name="min_obj_pix_diam" default="20"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
+    <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
+
 
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
@@ -38,6 +43,14 @@
     </include>
 
     <node pkg="localization" type="localization_node" name="localization_node" output="screen">
+        <!--cv vis-->
+        <param name="cv_vis" value="$(arg cv_vis)"/>
+        <param name="check_point_cloud" value="$(arg check_point_cloud)"/>
+        <!-- Cam Params-->
+        <param name="camera2_color_width" value="$(arg camera2_color_width)"/>
+        <param name="camera2_color_height" value="$(arg camera2_color_height)"/>
+        <param name="camera2_color_fps" value="$(arg camera2_color_fps)"/>
+        <param name="camera2_clip_distance" value="$(arg camera2_clip_distance)"/>
         <!-- Ball Thresholding -->
         <param name="ball_thres_method" value="$(arg ball_thres_method)"/>
         <!-- HSV -->

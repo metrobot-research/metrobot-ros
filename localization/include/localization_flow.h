@@ -32,8 +32,9 @@ public:
 
     // for use
     void updateParams();
-    void SegmentBallThreshold();
-    void GetBallCenter();
+    void SegmentBall2D();
+    void GetBallCloud();
+    void CalcBallCenter3D();
 
     static void on_trackbar( int, void* ){
         //This function gets called whenever a
@@ -61,7 +62,13 @@ private:
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
 
     // params
+    // visualization opt
+    bool cv_vis;
+    bool check_point_cloud;
+    // camera params
     float clip_z_dis[2]; // min, max in meters, according to datasheet
+    // ball property
+    float ball_real_radius = 0.033;
     //  frame size
     int FRAME_WIDTH = 640;
     int FRAME_HEIGHT = 480;
@@ -84,11 +91,11 @@ private:
     bool useMorphOps = true;
     int ERODE_DIAM = 3;
     int DILATE_DIAM = 8;
-    int MAX_NUM_OBJECTS=50; //max number of objects to be detected in frame
     int MIN_OBJ_PIX_DIAM = 20;
     int MIN_OBJECT_AREA = MIN_OBJ_PIX_DIAM * MIN_OBJ_PIX_DIAM;
     int MAX_OBJ_PERCENTAGE = 70;
     int MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
+    int MAX_NUM_OBJECTS=50; //max number of objects to be detected in frame
 
     //names that will appear at the top of each window
     const string windowName = "Original Image";
@@ -98,25 +105,32 @@ private:
     const string trackbarWindowName = "Trackbars";
 
     // data processing flow
-    bool found_ball;
-    Eigen::Vector3f prev_ball_center;
-    Eigen::Vector3f ball_center_pred; // in d345i frame
+    // read in bgr & depth imgs
+    std::deque<DualImgStamped> rgb_d_buffer_;
+    DualImgStamped cur_rgbd_stamped;
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
-    DualImgStamped cur_rgbd_stamped;
-    std::deque<DualImgStamped> rgb_d_buffer_;
-
-    // for use
+    // SegmentBall2D
+    bool found_ball;
+    int ball_i2D, ball_j2D;
+    int ball_pix_radius;
+    cv::Mat imgThresed;
+    // GetBallCenter3D
     pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
     Eigen::Vector3f ball_center;
+
+
+    Eigen::Vector3f prev_ball_center;
+    Eigen::Vector3f ball_center_pred; // in d345i frame
+
+
+
+
     // for rviz
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr full_cloud_ptr;
 
-
     // timing
     std::shared_ptr<TicToc> time_run;
-
-
 };
 
 #endif //SRC_LOCALIZATION_FLOW_H
