@@ -15,7 +15,7 @@
 class BallEstimator{
 public:
     BallEstimator(ros::NodeHandle &nh): // params not set to const since we may need real-time tuning
-            nh_(nh), give_up(true), lost_time(0),
+            nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0),
             cur_ball_vel_w(0,0,0){
 
         nh_.getParam("ball_est_pred_mode", pred_mode);
@@ -34,19 +34,27 @@ public:
         }
         lost_time = 0;
 
-        ball_position_his.push_back(new_ball_pos_w);
-        if(ball_position_his.size() == 1)
+        if(ball_position_his.empty())
             window_start_time = timestamp;
-        step_time = (timestamp - window_end_time).toSec();
+        ball_position_his.push_back(new_ball_pos_w);
+        if(has_inited){
+            step_time = (timestamp - window_end_time).toSec();
+        }
         window_end_time = timestamp;
         if((window_end_time - window_start_time).toSec() > max_window_time)
             ball_position_his.pop_front();
 
         cur_wheel_center_w = new_wheel_center_w;
         estimateCurBallState();
+
+        has_inited = true;
     };
 
     void addLost(const ros::Time &timestamp, const Eigen::Vector3f &new_wheel_center_w){
+        if(!has_inited){
+            std::cout << "Give up-------------" << std::endl;
+            return;
+        }
         step_time = (timestamp - window_end_time).toSec();
         window_start_time = timestamp;
         window_end_time = timestamp;
@@ -81,7 +89,7 @@ private:
                 cur_ball_vel_w.setZero();
             }else{ // ball_position_his.size() > 1, apply moving window vel filter(smooth out differentiation noise)
                 cur_ball_pos_w = ball_position_his.back();
-                cur_ball_vel_w = (ball_position_his.back() - ball_position_his.front()) / (step_time * (float)(ball_position_his.size()-1));
+                cur_ball_vel_w = (ball_position_his.back() - ball_position_his.front()) / (window_end_time - window_start_time).toSec();
             }
 
             prev_ball_pos_w = cur_ball_pos_w;
@@ -104,7 +112,7 @@ private:
                 cur_ball_vel_w.z() = 0;
                 cur_ball_pos_w.z() = cur_wheel_center_w.z();
             }else{ // previously above gnd
-                float t_hit_gnd = (-prev_ball_vel_w.z() + sqrt(prev_ball_vel_w.z()*prev_ball_vel_w.z() + 2*9.8*prev_ball_height)) / 9.8;
+                float t_hit_gnd = (prev_ball_vel_w.z() + sqrt(prev_ball_vel_w.z()*prev_ball_vel_w.z() + 2*9.8*prev_ball_height)) / 9.8;
                 if(t_hit_gnd > step_time){ // ball does not hit gnd
                     cur_ball_pos_w.z() = prev_ball_pos_w.z() + step_time * prev_ball_vel_w.z() - 0.5 * step_time * step_time * 9.8; // assume acc is g
                     cur_ball_vel_w.z() = prev_ball_vel_w.z() - step_time * 9.8;
@@ -117,7 +125,7 @@ private:
                         cur_ball_pos_w.z() = cur_wheel_center_w.z();
                     }else{ // large bouncing back vel, won't bounce again
                         cur_ball_vel_w.z() = v_bounce_back - 9.8 * rise_time;
-                        cur_ball_pos_w.z() = v_bounce_back * rise_time - 0.5 * rise_time * rise_time * 9.8;
+                        cur_ball_pos_w.z() = cur_wheel_center_w.z() + v_bounce_back * rise_time - 0.5 * rise_time * rise_time * 9.8;
                     }
 
                 }
@@ -136,6 +144,7 @@ private:
 
     float lost_time;
     bool give_up;
+    bool has_inited;
     ros::Time window_start_time, window_end_time;
     float step_time;
     std::deque<Eigen::Vector3f> ball_position_his;

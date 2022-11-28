@@ -15,6 +15,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     tf_broadcast_ptr_(std::make_shared<TFBroadCaster>()),
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
+    ball_vel_pub_ptr_(std::make_shared<TwistPublisher>(nh_, "/ball_vel", "/ball_real", 20)),
     ball_estimator(nh),
     cv_vis(false),
     check_point_cloud(false),
@@ -94,12 +95,14 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
 
 
 void LocalizationFlow::Run(){
-    time_run->tic();
+//    time_run->tic();
     rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
 
     if(!rgb_d_buffer_.empty()){
         cur_rgbd_stamped = rgb_d_buffer_.back();
         rgb_d_buffer_.clear();
+        cur_wheel_center = Eigen::Vector3f(0,0,0); // TODO: -----synchronize wheel center data with dual img msg------
+        nh_.getParam("gnd_height", cur_wheel_center.z());
 
         try{
             tf_listener_ptr_->lookupTransform("/t265_odom_frame", "/d435i_color_optical_frame", cur_rgbd_stamped.time, cur_d435i_pos, cur_d435i_ori);
@@ -126,14 +129,25 @@ void LocalizationFlow::Run(){
             if(found_ball){
                 GetBallCloud();
                 CalcBallCenter3D();
+                ball_estimator.addPos(cur_rgbd_stamped.time, ball_center, cur_wheel_center);
+
                 ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
                 // Publish ball tf wrt world frame, with orientation set to identity for convenience
                 tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                  ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
+                ball_vel_pub_ptr_->Publish(ball_estimator.getCurBallVel(), Eigen::Vector3f(0,0,0), cur_rgbd_stamped.time);
+            }else{
+                ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
+                if(!ball_estimator.isGiveup()){
+                    ball_center = ball_estimator.getCurBallPos();
+                    tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
+                                                     ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
+                    ball_vel_pub_ptr_->Publish(ball_estimator.getCurBallVel(), Eigen::Vector3f(0,0,0), cur_rgbd_stamped.time);
+                }
             }
         }
     }
-    time_run->toc();
+//    time_run->toc();
 }
 
 void LocalizationFlow::GenerateFullPointCloud(){

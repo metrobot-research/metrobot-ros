@@ -6,7 +6,7 @@
     <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
     <arg name="camera2_color_height"              default="480"/>
     <arg name="camera2_color_fps"                 default="60"/> <!-- Remember to change ROS node frequency -->
-    <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
+    <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
     <!-- Ball Thresholding -->
     <arg name="ball_thres_method" default="HSV"/>
@@ -32,10 +32,11 @@
     <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
     <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
     <!-- ball estimation -->
+    <arg name="gnd_height" default="-0.87"/>  <!--TODO: synchronize wheel center data with dual img msg -->
     <arg name="ball_est_pred_mode" default="gravity"/> <!-- uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
-    <arg name="ball_est_max_window_time" default="0.33"/>
+    <arg name="ball_est_max_window_time" default="0.5"/>
     <arg name="ball_est_max_lost_time" default="1"/>
-    <arg name="ball_est_bounce_lost_coeff" default="0.2"/>
+    <arg name="ball_est_bounce_lost_coeff" default="0.45"/>
 
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
@@ -79,10 +80,11 @@
         <param name="min_obj_pix_diam" value="$(arg min_obj_pix_diam)"/>
         <param name="max_obj_percentage" value="$(arg max_obj_percentage)"/>
         <!-- ball estimation -->
-        <param name="ball_est_pred_mode" value="gravity"/>
-        <param name="ball_est_max_window_time" value="0.33"/>
-        <param name="ball_est_max_lost_time" value="1"/>
-        <param name="ball_est_bounce_lost_coeff" value="0.2"/>
+        <param name="gnd_height" value="$(arg gnd_height)"/> <!--TODO: synchronize wheel center data with dual img msg -->
+        <param name="ball_est_pred_mode" value="$(arg ball_est_pred_mode)"/>
+        <param name="ball_est_max_window_time" value="$(arg ball_est_max_window_time)"/>
+        <param name="ball_est_max_lost_time" value="$(arg ball_est_max_lost_time)"/>
+        <param name="ball_est_bounce_lost_coeff" value="$(arg ball_est_bounce_lost_coeff)"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>

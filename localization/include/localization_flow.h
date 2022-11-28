@@ -7,7 +7,7 @@
 #include "subscriber/tf_listener.hpp"
 // publisher
 #include "publisher/cloud_publisher.hpp"
-#include "publisher/pose_publisher.hpp"
+#include "publisher/twist_publisher.hpp"
 #include "publisher/tf_broadcaster.hpp"
 // sensor data
 #include <sensor_msgs/CameraInfo.h>
@@ -62,6 +62,7 @@ private:
     //   for rviz
     std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
+    std::shared_ptr<TwistPublisher> ball_vel_pub_ptr_;
     // ball estimator
     BallEstimator ball_estimator;
 
@@ -109,11 +110,13 @@ private:
     const string trackbarWindowName = "Trackbars";
 
     // data processing flow
-    // read in bgr & depth imgs
+    // read in bgr & depth imgs, and wheel_center
     std::deque<DualImgStamped> rgb_d_buffer_;
     DualImgStamped cur_rgbd_stamped;
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
+    std::deque<Eigen::Vector3f> wheel_center_buffer_;
+    Eigen::Vector3f cur_wheel_center;
     // SegmentBall2D
     bool found_ball;
     int ball_i2D, ball_j2D;
