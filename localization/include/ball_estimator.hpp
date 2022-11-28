@@ -52,7 +52,7 @@ public:
 
     void addLost(const ros::Time &timestamp, const Eigen::Vector3f &new_wheel_center_w){
         if(!has_inited){
-            std::cout << "Give up-------------" << std::endl;
+//            std::cout << "Give up-------------" << std::endl;
             return;
         }
         step_time = (timestamp - window_end_time).toSec();
@@ -64,13 +64,15 @@ public:
             lost_time += step_time;
             if(lost_time >= max_lost_time){
                 give_up = true;
-                std::cout << "Give up-------------" << std::endl;
+//                std::cout << "Give up-------------" << std::endl;
             }else{
                 cur_wheel_center_w = new_wheel_center_w;
                 estimateCurBallState();
             }
-        }else
-            std::cout << "Give up-------------" << std::endl;
+        }else{
+//            std::cout << "Give up-------------" << std::endl;
+        }
+
     };
 
     // Get Estimation Result

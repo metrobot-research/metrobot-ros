@@ -7,7 +7,7 @@
 #include "subscriber/tf_listener.hpp"
 // publisher
 #include "publisher/cloud_publisher.hpp"
-#include "publisher/twist_publisher.hpp"
+#include "publisher/arrow_publisher.hpp"
 #include "publisher/tf_broadcaster.hpp"
 // sensor data
 #include <sensor_msgs/CameraInfo.h>
@@ -62,7 +62,7 @@ private:
     //   for rviz
     std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
-    std::shared_ptr<TwistPublisher> ball_vel_pub_ptr_;
+    std::shared_ptr<ArrowPublisher> ball_vel_pub_ptr_;
     // ball estimator
     BallEstimator ball_estimator;
 

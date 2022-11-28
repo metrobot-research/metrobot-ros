@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         sensor_msgs
         geometry_msgs
+        visualization_msgs
 #        customized_msgs
         message_filters # Topic同步
         )

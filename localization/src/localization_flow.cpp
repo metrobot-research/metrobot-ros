@@ -15,7 +15,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     tf_broadcast_ptr_(std::make_shared<TFBroadCaster>()),
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
-    ball_vel_pub_ptr_(std::make_shared<TwistPublisher>(nh_, "/ball_vel", "/ball_real", 20)),
+    ball_vel_pub_ptr_(std::make_shared<ArrowPublisher>(nh_, "/ball_vel", "/t265_odom_frame", 20)),
     ball_estimator(nh),
     cv_vis(false),
     check_point_cloud(false),
@@ -135,14 +135,14 @@ void LocalizationFlow::Run(){
                 // Publish ball tf wrt world frame, with orientation set to identity for convenience
                 tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                  ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
-                ball_vel_pub_ptr_->Publish(ball_estimator.getCurBallVel(), Eigen::Vector3f(0,0,0), cur_rgbd_stamped.time);
+                ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
             }else{
                 ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
                 if(!ball_estimator.isGiveup()){
                     ball_center = ball_estimator.getCurBallPos();
                     tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                      ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
-                    ball_vel_pub_ptr_->Publish(ball_estimator.getCurBallVel(), Eigen::Vector3f(0,0,0), cur_rgbd_stamped.time);
+                    ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
                 }
             }
         }
@@ -286,10 +286,17 @@ void LocalizationFlow::GetBallCloud(){
     else
         max_valid_z = clip_z_dis[1];
 
+    int total = (i_max-i_min) * (j_max-j_min);
+    int cntDepth1 = 0, cntDepth2 = 0;
+
     for(int i = i_min; i <= i_max; i++) {
         for (int j = j_min; j <= j_max; j++) {
             if (imgThresed.at<bool>(i, j)) {
                 float z = depth_ptr->image.at<uint16_t>(i, j) * 0.001;
+                if(z > clip_z_dis[0])
+                    cntDepth1++;
+                if(z < max_valid_z)
+                    cntDepth2++;
                 if ((z > clip_z_dis[0]) && (z < max_valid_z)) {
                     Eigen::Vector3f point(float(j), float(i),1.); // Image i,j is optical_frame y,x, not x,y! Invert them when going to point cloud
                     point = point * z;
@@ -300,6 +307,7 @@ void LocalizationFlow::GetBallCloud(){
             }
         }
     }
+    cout << cntDepth1 / (float)total * 100 << "% passed 1st depth, " << cntDepth2 / (float)total * 100 << "% passed 2nd depth" << endl;
 }
 
 void LocalizationFlow::CalcBallCenter3D(){ // Get center of ball in world coordinate
