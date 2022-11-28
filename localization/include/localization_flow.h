@@ -13,6 +13,8 @@
 #include <sensor_msgs/CameraInfo.h>
 #include "sensor_data/cloud_data.hpp"
 #include "sensor_data/dual_img_stamped.hpp"
+// ball estimator
+#include "ball_estimator.hpp"
 // yaml
 #include <yaml-cpp/yaml.h>
 // tools
@@ -60,6 +62,8 @@ private:
     //   for rviz
     std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
+    // ball estimator
+    BallEstimator ball_estimator;
 
     // params
     // visualization opt

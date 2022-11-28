@@ -15,6 +15,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     tf_broadcast_ptr_(std::make_shared<TFBroadCaster>()),
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
+    ball_estimator(nh),
     cv_vis(false),
     check_point_cloud(false),
     found_ball(false),

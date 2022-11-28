@@ -31,7 +31,11 @@
     <arg name="min_obj_pix_diam" default="20"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
     <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
     <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
-
+    <!-- ball estimation -->
+    <arg name="ball_est_pred_mode" default="gravity"/> <!-- uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
+    <arg name="ball_est_max_window_time" default="0.33"/>
+    <arg name="ball_est_max_lost_time" default="1"/>
+    <arg name="ball_est_bounce_lost_coeff" default="0.2"/>
 
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
@@ -74,6 +78,11 @@
         <param name="max_num_objs" value="$(arg max_num_objs)"/>
         <param name="min_obj_pix_diam" value="$(arg min_obj_pix_diam)"/>
         <param name="max_obj_percentage" value="$(arg max_obj_percentage)"/>
+        <!-- ball estimation -->
+        <param name="ball_est_pred_mode" value="gravity"/>
+        <param name="ball_est_max_window_time" value="0.33"/>
+        <param name="ball_est_max_lost_time" value="1"/>
+        <param name="ball_est_bounce_lost_coeff" value="0.2"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>
