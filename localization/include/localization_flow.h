@@ -126,13 +126,6 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
     Eigen::Vector3f ball_center;
 
-
-    Eigen::Vector3f prev_ball_center;
-    Eigen::Vector3f ball_center_pred; // in d345i frame
-
-
-
-
     // for rviz
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr full_cloud_ptr;
 

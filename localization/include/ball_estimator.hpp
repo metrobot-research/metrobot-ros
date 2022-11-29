@@ -12,18 +12,26 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+struct BallPosStamped{
+    Eigen::Vector3f position;
+    ros::Time timestamp;
+};
+
 class BallEstimator{
 public:
     BallEstimator(ros::NodeHandle &nh): // params not set to const since we may need real-time tuning
-            nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0),
+            nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0), window_time(0),
             cur_ball_vel_w(0,0,0){
 
         nh_.getParam("ball_est_pred_mode", pred_mode);
         nh_.getParam("ball_est_max_window_time", max_window_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
         nh_.getParam("ball_est_bounce_lost_coeff", bounce_lost_coeff);
-        
-        ball_position_his.clear();
+        float freq;
+        nh_.getParam("camera2_color_fps", freq);
+        frame_dt = 1. / freq;
+
+        ball_pos_stamped_his.clear();
     };
 
     // Add Measurement and then Update Estimation
@@ -34,15 +42,17 @@ public:
         }
         lost_time = 0;
 
-        if(ball_position_his.empty())
-            window_start_time = timestamp;
-        ball_position_his.push_back(new_ball_pos_w);
-        if(has_inited){
-            step_time = (timestamp - window_end_time).toSec();
+        if(has_inited)
+            step_time = (timestamp - last_time).toSec();
+        last_time = timestamp;
+
+        BallPosStamped newPosStamped = {new_ball_pos_w, timestamp};
+        ball_pos_stamped_his.push_back(newPosStamped);
+        window_time = (ball_pos_stamped_his.back().timestamp - ball_pos_stamped_his.front().timestamp).toSec();
+        while(window_time > max_window_time){
+            ball_pos_stamped_his.pop_front();
+            window_time = (ball_pos_stamped_his.back().timestamp - ball_pos_stamped_his.front().timestamp).toSec();
         }
-        window_end_time = timestamp;
-        if((window_end_time - window_start_time).toSec() > max_window_time)
-            ball_position_his.pop_front();
 
         cur_wheel_center_w = new_wheel_center_w;
         estimateCurBallState();
@@ -55,12 +65,18 @@ public:
 //            std::cout << "Give up-------------" << std::endl;
             return;
         }
-        step_time = (timestamp - window_end_time).toSec();
-        window_start_time = timestamp;
-        window_end_time = timestamp;
+        step_time = (timestamp - last_time).toSec();
+        last_time = timestamp;
+        if(!ball_pos_stamped_his.empty()){
+            window_time = (timestamp - ball_pos_stamped_his.front().timestamp).toSec();
+            while(window_time > max_window_time && !ball_pos_stamped_his.empty()){
+                ball_pos_stamped_his.pop_front();
+                window_time = (timestamp - ball_pos_stamped_his.front().timestamp).toSec();
+            }
+        }else
+            window_time = 0;
 
         if(lost_time < max_lost_time){
-            ball_position_his.clear();
             lost_time += step_time;
             if(lost_time >= max_lost_time){
                 give_up = true;
@@ -83,21 +99,22 @@ public:
 private:
     void estimateCurBallState(){
         if(!give_up){
-            if(ball_position_his.empty()){ // lost but not give up, do pred
+            if(lost_time > 0){ // lost but not give up, do pred
                 updateBallPred(); // always has prev ball state if give_up = false && ball_position_his.empty()
                                   // the only case leading to this is lost for cur frame, but has previous estimate
-            }else if(ball_position_his.size() == 1){
-                cur_ball_pos_w = ball_position_his.back();
-                cur_ball_vel_w.setZero();
-            }else{ // ball_position_his.size() > 1, apply moving window vel filter(smooth out differentiation noise)
-                cur_ball_pos_w = ball_position_his.back();
-                cur_ball_vel_w = (ball_position_his.back() - ball_position_his.front()) / (window_end_time - window_start_time).toSec();
+            }else if(window_time < max_window_time / 2){ // moving window not long enough, calc vel will introduce noise and spike
+                cur_ball_pos_w = ball_pos_stamped_his.back().position;
+                cur_ball_vel_w.setZero(); //fixme: use pred.ed spd here, or spd will be reset to 0 too quickly
+            }else{ // moving window long enough, apply moving window vel filter(smooth out differentiation noise)
+                cur_ball_pos_w = ball_pos_stamped_his.back().position;
+                cur_ball_vel_w = (ball_pos_stamped_his.back().position - ball_pos_stamped_his.front().position) / window_time;
             }
 
             prev_ball_pos_w = cur_ball_pos_w;
             prev_ball_vel_w = cur_ball_vel_w;
             prev_ball_height = cur_ball_pos_w.z() - cur_wheel_center_w.z();
         }
+//        std::cout << "cur ball vel: " << cur_ball_vel_w << std::endl;
     };
 
     void updateBallPred(){
@@ -147,9 +164,11 @@ private:
     float lost_time;
     bool give_up;
     bool has_inited;
-    ros::Time window_start_time, window_end_time;
-    float step_time;
-    std::deque<Eigen::Vector3f> ball_position_his;
+    ros::Time last_time;
+    float window_time;
+    float frame_dt; // default frame dt specified in launch
+    float step_time; // dt between the cur and prev measurement (lost is also a measurement)
+    std::deque<BallPosStamped> ball_pos_stamped_his;
     Eigen::Vector3f prev_ball_pos_w;
     Eigen::Vector3f prev_ball_vel_w;
     float prev_ball_height;

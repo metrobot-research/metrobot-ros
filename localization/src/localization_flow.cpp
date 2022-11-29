@@ -128,11 +128,13 @@ void LocalizationFlow::Run(){
 
             if(found_ball){
                 GetBallCloud();
-                CalcBallCenter3D();
-                ball_estimator.addPos(cur_rgbd_stamped.time, ball_center, cur_wheel_center);
+                if(!ball_cloud_ptr->empty()){ // if detect ball in rgb but cloud is empty, keep the ball pos & vel the same as before to reduce noise
+                    CalcBallCenter3D();
+                    ball_estimator.addPos(cur_rgbd_stamped.time, ball_center, cur_wheel_center);
 
-                ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
-                // Publish ball tf wrt world frame, with orientation set to identity for convenience
+                    ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
+                    // Publish ball tf wrt world frame, with orientation set to identity for convenience
+                }
                 tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                  ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
                 ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
@@ -175,7 +177,7 @@ void LocalizationFlow::GenerateFullPointCloud(){
                 ptxyzrgb.x = point.x();
                 ptxyzrgb.y = point.y();
                 ptxyzrgb.z = point.z();
-                ptxyzrgb.r = float(rgb_ptr->image.at<cv::Vec3b>(i,j)[0]); // fixme: guess this is assigning bgr to rgb, later in publisher's conversion to ROS msg, rgb here is assigned to bgr
+                ptxyzrgb.r = float(rgb_ptr->image.at<cv::Vec3b>(i,j)[0]); // this is assigning bgr to rgb, later in publisher's conversion to ROS msg, rgb here is assigned to bgr
                 ptxyzrgb.g = float(rgb_ptr->image.at<cv::Vec3b>(i,j)[1]);
                 ptxyzrgb.b = float(rgb_ptr->image.at<cv::Vec3b>(i,j)[2]);
                 full_cloud_ptr->push_back(ptxyzrgb);
@@ -232,36 +234,6 @@ void LocalizationFlow::SegmentBall2D(){
 
         waitKey(30); //!! mind this 30ms when using openCV window visualization
     }
-
-//    for(int i = 0; i < depth_ptr->image.rows; i++){
-//        for(int j = 0; j < depth_ptr->image.cols; j++){
-//            if(depth_ptr->image.at<uint16_t>(i,j) != NAN){
-//                uint8_t bgr[3] = {rgb_ptr->image.at<cv::Vec3b>(i,j)[0],
-//                                   rgb_ptr->image.at<cv::Vec3b>(i,j)[1],
-//                                   rgb_ptr->image.at<cv::Vec3b>(i,j)[2]}; // fixme: guess it's bgr here, output full cloud is correct because during publishing there's a conversion, where rgb are assigned to bgr
-//                if(sqrt((bgr[0]*bgr[0] + bgr[1]*bgr[1] + bgr[2]*bgr[2]) / 3.) > bright_thres){
-//                    Eigen::Vector3f point(float(j), float(i), 1.); // Image i,j is optical_frame y,x, not x,y! Invert them when going to point cloud
-//                    point = point * float(depth_ptr->image.at<uint16_t>(i,j)) * 0.001;
-//                    if(point.z() < clip_z_dis[0] || point.z() > clip_z_dis[1]) // clip out invalid points, K_inv does not change z coord
-//                        continue;
-//                    point = K_inv * point;
-//
-//                    if(found_ball){
-//                        // remove points too far from predicted ball pos wrt d435i according to tracking camera
-//                        ball_center_pred = cur_d435i_ori.inverse() * (prev_ball_center - cur_d435i_pos); // in d435i frame, fixme: assuming ball is static wrt world frame
-//                                                                                                         // fixme: difficult to distract, but once distracted, lost forever
-//                        if((point - ball_center_pred).norm() < pred_thres){
-//                            pcl::PointXYZ pcl_pxyz(point.x(), point.y(), point.z());
-//                            ball_cloud_ptr->push_back(pcl_pxyz);
-//                        }
-//                    }else{
-//                        pcl::PointXYZ pcl_pxyz(point.x(), point.y(), point.z());
-//                        ball_cloud_ptr->push_back(pcl_pxyz);
-//                    }
-//                }
-//            }
-//        }
-//    }
 }
 
 void LocalizationFlow::GetBallCloud(){
@@ -281,22 +253,15 @@ void LocalizationFlow::GetBallCloud(){
     min_z *= 0.001;
     max_z *= 0.001;
 
-    if(max_z - min_z > 2 * ball_real_radius)
+    if(max_z - min_z > 2 * ball_real_radius){
         max_valid_z = (min_z + max_z) / 2;
-    else
+    }else
         max_valid_z = clip_z_dis[1];
-
-    int total = (i_max-i_min) * (j_max-j_min);
-    int cntDepth1 = 0, cntDepth2 = 0;
 
     for(int i = i_min; i <= i_max; i++) {
         for (int j = j_min; j <= j_max; j++) {
             if (imgThresed.at<bool>(i, j)) {
                 float z = depth_ptr->image.at<uint16_t>(i, j) * 0.001;
-                if(z > clip_z_dis[0])
-                    cntDepth1++;
-                if(z < max_valid_z)
-                    cntDepth2++;
                 if ((z > clip_z_dis[0]) && (z < max_valid_z)) {
                     Eigen::Vector3f point(float(j), float(i),1.); // Image i,j is optical_frame y,x, not x,y! Invert them when going to point cloud
                     point = point * z;
@@ -307,7 +272,6 @@ void LocalizationFlow::GetBallCloud(){
             }
         }
     }
-    cout << cntDepth1 / (float)total * 100 << "% passed 1st depth, " << cntDepth2 / (float)total * 100 << "% passed 2nd depth" << endl;
 }
 
 void LocalizationFlow::CalcBallCenter3D(){ // Get center of ball in world coordinate
@@ -325,8 +289,6 @@ void LocalizationFlow::CalcBallCenter3D(){ // Get center of ball in world coordi
 
         ball_center = cur_d435i_pos + cur_d435i_ori * ball_center;
         ball_center += ball_center.normalized() * ball_real_radius; // plus the ball radius to get the real ball center
-        prev_ball_center = ball_center; //TODO: -----was here, ball center in world coord done, thinking about how to do pred if ball is lost
-                                        // probably use vel + prev pos. If lost for 1s, switch to lost state(currently not worth it to implement lost state, just set robot static)
     }else
         cerr << "-------- ball cloud of size 0 when ball is detected! ----------" << endl;
 }
