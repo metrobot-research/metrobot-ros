@@ -37,6 +37,7 @@
     <arg name="ball_est_max_recent_his_time" default="0.5"/>
     <arg name="ball_est_max_lost_time" default="1"/>
     <arg name="noise_overcoming_vel" default="0.3"/>
+    <arg name="max_valid_vel" default="100"/>
     <arg name="ball_est_bounce_lost_coeff" default="0.45"/>
 
 
@@ -86,6 +87,7 @@
         <param name="ball_est_max_recent_his_time" value="$(arg ball_est_max_recent_his_time)"/>
         <param name="ball_est_max_lost_time" value="$(arg ball_est_max_lost_time)"/>
         <param name="noise_overcoming_vel" value="$(arg noise_overcoming_vel)"/>
+        <param name="max_valid_vel" value="$(arg max_valid_vel)"/>
         <param name="ball_est_bounce_lost_coeff" value="$(arg ball_est_bounce_lost_coeff)"/>
     </node>
 

@@ -30,6 +30,7 @@ public:
         nh_.getParam("ball_est_max_recent_his_time", max_recent_his_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
         nh_.getParam("noise_overcoming_vel", noise_overcoming_vel);
+        nh_.getParam("max_valid_vel", max_valid_vel);
         nh_.getParam("ball_est_bounce_lost_coeff", bounce_lost_coeff);
         float freq;
         nh_.getParam("camera2_color_fps", freq);
@@ -54,20 +55,10 @@ public:
 
         BallPosStamped newPosStamped = {new_ball_pos_w, timestamp};
         recent_ball_pos_stamped_his.push_back(newPosStamped);
-        while(!recent_ball_pos_stamped_his.empty()){
-            if( (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec() > max_recent_his_time ){
-                old_ball_pos_stamped_his.push_back(recent_ball_pos_stamped_his.front());
-                recent_ball_pos_stamped_his.pop_front();
-            }else
-                break;
-        }
-        recent_his_time = (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec();
-        while(!old_ball_pos_stamped_his.empty()){
-            if((timestamp - old_ball_pos_stamped_his.front().timestamp).toSec() > max_lost_time)
-                old_ball_pos_stamped_his.pop_front();
-            else
-                break;
-        }
+
+        popOutdatedHistory(timestamp);
+
+        recent_his_time = (timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec();
 
         cur_wheel_center_w = new_wheel_center_w;
         estimateCurBallState();
@@ -84,25 +75,13 @@ public:
         }
         step_time = (timestamp - last_time).toSec();
         last_time = timestamp;
-        while(!recent_ball_pos_stamped_his.empty()){
-            if( ((timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec() > max_recent_his_time) ){
-                old_ball_pos_stamped_his.push_back(recent_ball_pos_stamped_his.front());
-                recent_ball_pos_stamped_his.pop_front();
-            }else
-                break;
-        }
+
+        popOutdatedHistory(timestamp);
 
         if(!recent_ball_pos_stamped_his.empty())
             recent_his_time = (timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec();
         else
             recent_his_time = 0;
-
-        while(!old_ball_pos_stamped_his.empty()){
-            if( (timestamp - old_ball_pos_stamped_his.front().timestamp).toSec() > max_lost_time )
-                old_ball_pos_stamped_his.pop_front();
-            else
-                break;
-        }
 
         if(lost_time < max_lost_time){
             lost_time += step_time;
@@ -127,6 +106,23 @@ public:
     Eigen::Vector3f getCurBallVel(){return cur_ball_vel_w;};
 
 private:
+    void popOutdatedHistory(const ros::Time &timestamp){
+        while(!recent_ball_pos_stamped_his.empty()){
+            if( ((timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec() > max_recent_his_time) ){
+                old_ball_pos_stamped_his.push_back(recent_ball_pos_stamped_his.front());
+                recent_ball_pos_stamped_his.pop_front();
+            }else
+                break;
+        }
+
+        while(!old_ball_pos_stamped_his.empty()){
+            if( (timestamp - old_ball_pos_stamped_his.front().timestamp).toSec() > max_lost_time )
+                old_ball_pos_stamped_his.pop_front();
+            else
+                break;
+        }
+    };
+
     void estimateCurBallState(){
 //        std::cout << "In estimateCurBallState" << std::endl;
         if(!give_up){
@@ -159,7 +155,10 @@ private:
             }
 
 //            ofs << cur_ball_vel_w.z() << std::endl;
-            prev_ball_pos_w = cur_ball_pos_w;
+            if(cur_ball_vel_w.norm() > max_valid_vel)
+                cur_ball_vel_w = prev_ball_vel_w;
+            else
+                prev_ball_pos_w = cur_ball_pos_w;
             prev_ball_vel_w = cur_ball_vel_w;
             prev_ball_height = cur_ball_pos_w.z() - cur_wheel_center_w.z();
         }
@@ -213,6 +212,7 @@ private:
     float max_recent_his_time;
     float max_lost_time;
     float noise_overcoming_vel;
+    float max_valid_vel;
     float bounce_lost_coeff;
 
     float lost_time;
