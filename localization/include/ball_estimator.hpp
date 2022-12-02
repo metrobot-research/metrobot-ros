@@ -155,9 +155,9 @@ private:
             }
 
 //            ofs << cur_ball_vel_w.z() << std::endl;
-            if(cur_ball_vel_w.norm() > max_valid_vel)
-                cur_ball_vel_w = prev_ball_vel_w;
-            else
+            if(cur_ball_vel_w.norm() > max_valid_vel){
+                cur_ball_vel_w = prev_ball_vel_w; // fixme: should also modify the ball pos, trying to make this judgement at the beginning so we can do pred in this case
+            }else
                 prev_ball_pos_w = cur_ball_pos_w;
             prev_ball_vel_w = cur_ball_vel_w;
             prev_ball_height = cur_ball_pos_w.z() - cur_wheel_center_w.z();

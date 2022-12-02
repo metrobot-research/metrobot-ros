@@ -126,6 +126,7 @@ void LocalizationFlow::Run(){
 
             SegmentBall2D();
 
+            // update ball pos & vel estimate
             if(found_ball){
                 GetBallCloud();
                 if(!ball_cloud_ptr->empty()){ // if detect ball in rgb but cloud is empty, keep the ball pos & vel the same as before to reduce noise
@@ -147,6 +148,9 @@ void LocalizationFlow::Run(){
                     ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
                 }
             }
+
+            // TODO: calc control input
+
         }
     }
 //    time_run->toc();
