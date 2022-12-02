@@ -11,6 +11,7 @@
 #include <ros/ros.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <fstream>
 
 struct BallPosStamped{
     Eigen::Vector3f position;
@@ -20,22 +21,26 @@ struct BallPosStamped{
 class BallEstimator{
 public:
     BallEstimator(ros::NodeHandle &nh): // params not set to const since we may need real-time tuning
-            nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0), window_time(0),
-            cur_ball_vel_w(0,0,0){
+            nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0), recent_his_time(0),
+            cur_ball_vel_w(0,0,0)
+//            ofs("/home/warren/Documents/code/ME206A_Proj/catkin_chicken_robot/src/localization/data/vel/vel.csv")
+            {
 
         nh_.getParam("ball_est_pred_mode", pred_mode);
-        nh_.getParam("ball_est_max_window_time", max_window_time);
+        nh_.getParam("ball_est_max_recent_his_time", max_recent_his_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
         nh_.getParam("ball_est_bounce_lost_coeff", bounce_lost_coeff);
         float freq;
         nh_.getParam("camera2_color_fps", freq);
         frame_dt = 1. / freq;
 
-        ball_pos_stamped_his.clear();
+        recent_ball_pos_stamped_his.clear();
+        old_ball_pos_stamped_his.clear();
     };
 
     // Add Measurement and then Update Estimation
     void addPos(const ros::Time &timestamp, const Eigen::Vector3f &new_ball_pos_w, const Eigen::Vector3f &new_wheel_center_w){
+//        std::cout << "In addPos" << std::endl;
         if(give_up){
             give_up = false;
             std::cout << "Redetected ball-----------" << std::endl;
@@ -47,39 +52,63 @@ public:
         last_time = timestamp;
 
         BallPosStamped newPosStamped = {new_ball_pos_w, timestamp};
-        ball_pos_stamped_his.push_back(newPosStamped);
-        window_time = (ball_pos_stamped_his.back().timestamp - ball_pos_stamped_his.front().timestamp).toSec();
-        while(window_time > max_window_time){
-            ball_pos_stamped_his.pop_front();
-            window_time = (ball_pos_stamped_his.back().timestamp - ball_pos_stamped_his.front().timestamp).toSec();
+        recent_ball_pos_stamped_his.push_back(newPosStamped);
+        while(!recent_ball_pos_stamped_his.empty()){
+            if( (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec() > max_recent_his_time ){
+                old_ball_pos_stamped_his.push_back(recent_ball_pos_stamped_his.front());
+                recent_ball_pos_stamped_his.pop_front();
+            }else
+                break;
+        }
+        recent_his_time = (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec();
+        while(!old_ball_pos_stamped_his.empty()){
+            if((timestamp - old_ball_pos_stamped_his.front().timestamp).toSec() > max_lost_time)
+                old_ball_pos_stamped_his.pop_front();
+            else
+                break;
         }
 
         cur_wheel_center_w = new_wheel_center_w;
         estimateCurBallState();
 
         has_inited = true;
+//        std::cout << "Exit addPos" << std::endl;
     };
 
     void addLost(const ros::Time &timestamp, const Eigen::Vector3f &new_wheel_center_w){
+//        std::cout << "In addLost" << std::endl;
         if(!has_inited){
 //            std::cout << "Give up-------------" << std::endl;
             return;
         }
         step_time = (timestamp - last_time).toSec();
         last_time = timestamp;
-        if(!ball_pos_stamped_his.empty()){
-            window_time = (timestamp - ball_pos_stamped_his.front().timestamp).toSec();
-            while(window_time > max_window_time && !ball_pos_stamped_his.empty()){
-                ball_pos_stamped_his.pop_front();
-                window_time = (timestamp - ball_pos_stamped_his.front().timestamp).toSec();
-            }
-        }else
-            window_time = 0;
+        while(!recent_ball_pos_stamped_his.empty()){
+            if( ((timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec() > max_recent_his_time) ){
+                old_ball_pos_stamped_his.push_back(recent_ball_pos_stamped_his.front());
+                recent_ball_pos_stamped_his.pop_front();
+            }else
+                break;
+        }
+
+        if(!recent_ball_pos_stamped_his.empty())
+            recent_his_time = (timestamp - recent_ball_pos_stamped_his.front().timestamp).toSec();
+        else
+            recent_his_time = 0;
+
+        while(!old_ball_pos_stamped_his.empty()){
+            if( (timestamp - old_ball_pos_stamped_his.front().timestamp).toSec() > max_lost_time )
+                old_ball_pos_stamped_his.pop_front();
+            else
+                break;
+        }
 
         if(lost_time < max_lost_time){
             lost_time += step_time;
             if(lost_time >= max_lost_time){
                 give_up = true;
+                old_ball_pos_stamped_his.clear(); // fixme: if want to clear here, max lost time should > max old history time
+                recent_ball_pos_stamped_his.clear();
 //                std::cout << "Give up-------------" << std::endl;
             }else{
                 cur_wheel_center_w = new_wheel_center_w;
@@ -88,7 +117,7 @@ public:
         }else{
 //            std::cout << "Give up-------------" << std::endl;
         }
-
+//        std::cout << "Exit addPos" << std::endl;
     };
 
     // Get Estimation Result
@@ -98,26 +127,36 @@ public:
 
 private:
     void estimateCurBallState(){
+//        std::cout << "In estimateCurBallState" << std::endl;
         if(!give_up){
             if(lost_time > 0){ // lost but not give up, do pred
                 updateBallPred(); // always has prev ball state if give_up = false && ball_position_his.empty()
                                   // the only case leading to this is lost for cur frame, but has previous estimate
-            }else if(window_time < max_window_time / 2){ // moving window not long enough, calc vel will introduce noise and spike
-                cur_ball_pos_w = ball_pos_stamped_his.back().position;
-                cur_ball_vel_w.setZero(); //fixme: use pred.ed spd here, or spd will be reset to 0 too quickly
-            }else{ // moving window long enough, apply moving window vel filter(smooth out differentiation noise)
-                cur_ball_pos_w = ball_pos_stamped_his.back().position;
-                cur_ball_vel_w = (ball_pos_stamped_his.back().position - ball_pos_stamped_his.front().position) / window_time;
+            }else{ // lost_time = 0, cur frame not lost, recent_ball_pos_stamped_his.size() >= 1
+                // cur ball pos is definitely the latest measurement
+                cur_ball_pos_w = recent_ball_pos_stamped_his.back().position;
+                // cur ball vel estimate is handled case by case
+                if(recent_his_time > max_recent_his_time - frame_dt * 2){ // moving window long enough
+                    cur_ball_vel_w = (recent_ball_pos_stamped_his.back().position - recent_ball_pos_stamped_his.front().position) / recent_his_time;
+                }else if(!old_ball_pos_stamped_his.empty()){ // moving window not long enough, lengthen the window
+                    float vel_dt = (recent_ball_pos_stamped_his.back().timestamp - old_ball_pos_stamped_his.back().timestamp).toSec();
+                    cur_ball_vel_w = (recent_ball_pos_stamped_his.back().position - old_ball_pos_stamped_his.back().position) / vel_dt;
+                }else{ // not enough info for unnoisy vel estimate
+                    cur_ball_vel_w.setZero();
+                }
             }
 
+//            ofs << cur_ball_vel_w.z() << std::endl;
             prev_ball_pos_w = cur_ball_pos_w;
             prev_ball_vel_w = cur_ball_vel_w;
             prev_ball_height = cur_ball_pos_w.z() - cur_wheel_center_w.z();
         }
 //        std::cout << "cur ball vel: " << cur_ball_vel_w << std::endl;
+//        std::cout << "Exit estimateCurBallState" << std::endl;
     };
 
     void updateBallPred(){
+//        std::cout << "In updateBallPred" << std::endl;
         if(pred_mode == "uniform"){
             cur_ball_pos_w = prev_ball_pos_w + step_time * prev_ball_vel_w;
             cur_ball_vel_w = prev_ball_vel_w;
@@ -151,13 +190,15 @@ private:
             }
         }else
             std::cerr << "Invalid pred mode in ball_estimator (valid opts: uniform, gravity)" << std::endl;
-        
+//        std::cout << "Exit updateBallPred" << std::endl;
     };
     
-    
+    //fixme: just for debug
+//    std::ofstream ofs;
+
     ros::NodeHandle nh_;
     std::string pred_mode;
-    float max_window_time;
+    float max_recent_his_time;
     float max_lost_time;
     float bounce_lost_coeff;
 
@@ -165,10 +206,11 @@ private:
     bool give_up;
     bool has_inited;
     ros::Time last_time;
-    float window_time;
+    float recent_his_time;
     float frame_dt; // default frame dt specified in launch
     float step_time; // dt between the cur and prev measurement (lost is also a measurement)
-    std::deque<BallPosStamped> ball_pos_stamped_his;
+    std::deque<BallPosStamped> recent_ball_pos_stamped_his;
+    std::deque<BallPosStamped> old_ball_pos_stamped_his;
     Eigen::Vector3f prev_ball_pos_w;
     Eigen::Vector3f prev_ball_vel_w;
     float prev_ball_height;
