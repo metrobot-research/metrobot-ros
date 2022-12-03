@@ -43,15 +43,27 @@ public:
     // Add Measurement and then Update Estimation
     void addPos(const ros::Time &timestamp, const Eigen::Vector3f &new_ball_pos_w, const Eigen::Vector3f &new_wheel_center_w){
 //        std::cout << "In addPos" << std::endl;
+        if(has_inited){
+            step_time = (timestamp - last_time).toSec();
+
+            // check whether the measurement is a spike, if yes, then this frame should be considered as lost
+            if( (timestamp - latest_measurement.timestamp).toSec() < 0.2 ){
+                float vel = (new_ball_pos_w - latest_measurement.position).norm() / (timestamp - latest_measurement.timestamp).toSec();
+                if(vel > max_valid_vel){
+                    addLost(timestamp, new_wheel_center_w);
+                    return;
+                }
+            }
+        }
+        last_time = timestamp;
+
         if(give_up){
             give_up = false;
             std::cout << "Redetected ball-----------" << std::endl;
         }
         lost_time = 0;
 
-        if(has_inited)
-            step_time = (timestamp - last_time).toSec();
-        last_time = timestamp;
+
 
         BallPosStamped newPosStamped = {new_ball_pos_w, timestamp};
         recent_ball_pos_stamped_his.push_back(newPosStamped);
@@ -63,6 +75,7 @@ public:
         cur_wheel_center_w = new_wheel_center_w;
         estimateCurBallState();
 
+        latest_measurement = newPosStamped;
         has_inited = true;
 //        std::cout << "Exit addPos" << std::endl;
     };
@@ -155,10 +168,8 @@ private:
             }
 
 //            ofs << cur_ball_vel_w.z() << std::endl;
-            if(cur_ball_vel_w.norm() > max_valid_vel){
-                cur_ball_vel_w = prev_ball_vel_w; // fixme: should also modify the ball pos, trying to make this judgement at the beginning so we can do pred in this case
-            }else
-                prev_ball_pos_w = cur_ball_pos_w;
+
+            prev_ball_pos_w = cur_ball_pos_w;
             prev_ball_vel_w = cur_ball_vel_w;
             prev_ball_height = cur_ball_pos_w.z() - cur_wheel_center_w.z();
         }
@@ -225,6 +236,7 @@ private:
     std::deque<BallPosStamped> recent_ball_pos_stamped_his;
     std::deque<BallPosStamped> old_ball_pos_stamped_his;
     Eigen::Vector3f prev_ball_pos_w;
+    BallPosStamped latest_measurement;
     Eigen::Vector3f prev_ball_vel_w;
     float prev_ball_height;
     Eigen::Vector3f cur_ball_pos_w;

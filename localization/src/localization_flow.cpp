@@ -129,24 +129,23 @@ void LocalizationFlow::Run(){
             // update ball pos & vel estimate
             if(found_ball){
                 GetBallCloud();
-                if(!ball_cloud_ptr->empty()){ // if detect ball in rgb but cloud is empty, keep the ball pos & vel the same as before to reduce noise
+                if(!ball_cloud_ptr->empty()){
                     CalcBallCenter3D();
                     ball_estimator.addPos(cur_rgbd_stamped.time, ball_center, cur_wheel_center);
-
                     ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
                     // Publish ball tf wrt world frame, with orientation set to identity for convenience
+                }else{ // if detect ball in rgb but cloud is empty, treat cur frame as lost
+                    ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
                 }
+            }else{
+                ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
+            }
+
+            if(!ball_estimator.isGiveup()){
+                ball_center = ball_estimator.getCurBallPos();
                 tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                  ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
                 ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
-            }else{
-                ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
-                if(!ball_estimator.isGiveup()){
-                    ball_center = ball_estimator.getCurBallPos();
-                    tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
-                                                     ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
-                    ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
-                }
             }
 
             // TODO: calc control input
