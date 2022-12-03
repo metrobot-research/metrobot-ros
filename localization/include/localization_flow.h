@@ -78,19 +78,12 @@ private:
     int FRAME_WIDTH = 640;
     int FRAME_HEIGHT = 480;
     //  ball thresholding
-    string ball_thres_method = "HSV";
     int H_MIN = 0;
     int H_MAX = 256;
     int S_MIN = 0;
     int S_MAX = 256;
     int V_MIN = 0;
     int V_MAX = 256;
-    int R_MIN = 0;
-    int R_MAX = 256;
-    int G_MIN = 0;
-    int G_MAX = 256;
-    int B_MIN = 0;
-    int B_MAX = 256;
     //  object filtering
     bool trackObjects = true;
     bool useMorphOps = true;

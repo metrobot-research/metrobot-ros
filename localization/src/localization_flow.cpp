@@ -62,22 +62,13 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     nh_.getParam("camera2_clip_distance", clip_z_dis[1]);
     if(clip_z_dis[1] < 0)
         clip_z_dis[1] = 30;
-    // ball thresholding
-    nh_.getParam("ball_thres_method", ball_thres_method);
-    //   HSV
+    // HSV ball thresholding
     nh_.getParam("H_MIN", H_MIN);
     nh_.getParam("H_MAX", H_MAX);
     nh_.getParam("S_MIN", S_MIN);
     nh_.getParam("S_MAX", S_MAX);
     nh_.getParam("V_MIN", V_MIN);
     nh_.getParam("V_MAX", V_MAX);
-    //   RGB
-    nh_.getParam("R_MIN", R_MIN);
-    nh_.getParam("R_MAX", R_MAX);
-    nh_.getParam("G_MIN", G_MIN);
-    nh_.getParam("G_MAX", G_MAX);
-    nh_.getParam("B_MIN", B_MIN);
-    nh_.getParam("B_MAX", B_MAX);
     // obj filtering
     nh_.getParam("useMorphOps", useMorphOps);
     nh_.getParam("erode_diam", ERODE_DIAM);
@@ -207,17 +198,11 @@ void LocalizationFlow::SegmentBall2D(){
     cv::Mat imgHSV;
     //matrix storage for binary threshold image, imgThresed is a member var
 
-    if(ball_thres_method == "HSV"){
-        cvtColor(rgb_ptr->image, imgHSV,COLOR_BGR2HSV);
-        //filter HSV image between values and store filtered image to
-        //threshold matrix
-        inRange(imgHSV,cv::Scalar(H_MIN,S_MIN,V_MIN),cv::Scalar(H_MAX,S_MAX,V_MAX),imgThresed);
-    }else if(ball_thres_method == "RGB"){
-        inRange(rgb_ptr->image,cv::Scalar(B_MIN,G_MIN,R_MIN),cv::Scalar(B_MAX,G_MAX,R_MAX),imgThresed);
-    }else{
-        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
-        return;
-    }
+    cvtColor(rgb_ptr->image, imgHSV,COLOR_BGR2HSV);
+    //filter HSV image between values and store filtered image to
+    //threshold matrix
+    inRange(imgHSV,cv::Scalar(H_MIN,S_MIN,V_MIN),cv::Scalar(H_MAX,S_MAX,V_MAX),imgThresed);
+
     //perform morphological operations on thresholded image to eliminate noise
     //and emphasize the filtered object(s)
     if(useMorphOps)
@@ -232,8 +217,7 @@ void LocalizationFlow::SegmentBall2D(){
     if(cv_vis){
         imshow(windowName2,imgThresed);
         imshow(windowName,cameraFeed);
-        if(ball_thres_method == "HSV")
-            imshow(windowName1,imgHSV);
+        imshow(windowName1,imgHSV);
 
         waitKey(30); //!! mind this 30ms when using openCV window visualization
     }
@@ -307,24 +291,13 @@ void LocalizationFlow::createTrackbars(){
     namedWindow(trackbarWindowName,0);
     //create memory to store trackbar name on window
     char TrackbarName[50];
-    if(ball_thres_method == "HSV"){
-        sprintf( TrackbarName, "H_MIN", H_MIN);
-        sprintf( TrackbarName, "H_MAX", H_MAX);
-        sprintf( TrackbarName, "S_MIN", S_MIN);
-        sprintf( TrackbarName, "S_MAX", S_MAX);
-        sprintf( TrackbarName, "V_MIN", V_MIN);
-        sprintf( TrackbarName, "V_MAX", V_MAX);
-    }else if(ball_thres_method == "RGB"){
-        sprintf( TrackbarName, "R_MIN", R_MIN);
-        sprintf( TrackbarName, "R_MAX", R_MAX);
-        sprintf( TrackbarName, "G_MIN", G_MIN);
-        sprintf( TrackbarName, "G_MAX", G_MAX);
-        sprintf( TrackbarName, "B_MIN", B_MIN);
-        sprintf( TrackbarName, "B_MAX", B_MAX);
-    }else{
-        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
-        return;
-    }
+    sprintf( TrackbarName, "H_MIN", H_MIN);
+    sprintf( TrackbarName, "H_MAX", H_MAX);
+    sprintf( TrackbarName, "S_MIN", S_MIN);
+    sprintf( TrackbarName, "S_MAX", S_MAX);
+    sprintf( TrackbarName, "V_MIN", V_MIN);
+    sprintf( TrackbarName, "V_MAX", V_MAX);
+
     sprintf( TrackbarName, "ERODE_DIAM", ERODE_DIAM);
     sprintf( TrackbarName, "DILATE_DIAM", DILATE_DIAM);
     sprintf( TrackbarName, "MAX_NUM_OBJECTS", MAX_NUM_OBJECTS);
@@ -336,24 +309,13 @@ void LocalizationFlow::createTrackbars(){
     //the max value the trackbar can move (eg. H_HIGH),
     //and the function that is called whenever the trackbar is moved(eg. on_trackbar)
     //                                  ---->    ---->     ---->
-    if(ball_thres_method == "HSV"){
-        createTrackbar( "H_MIN", trackbarWindowName, &H_MIN, 256, on_trackbar );
-        createTrackbar( "H_MAX", trackbarWindowName, &H_MAX, 256, on_trackbar );
-        createTrackbar( "S_MIN", trackbarWindowName, &S_MIN, 256, on_trackbar );
-        createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, 256, on_trackbar );
-        createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, 256, on_trackbar );
-        createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, 256, on_trackbar );
-    }else if(ball_thres_method == "RGB"){
-        createTrackbar( "R_MIN", trackbarWindowName, &R_MIN, 256, on_trackbar );
-        createTrackbar( "R_MAX", trackbarWindowName, &R_MAX, 256, on_trackbar );
-        createTrackbar( "G_MIN", trackbarWindowName, &G_MIN, 256, on_trackbar );
-        createTrackbar( "G_MAX", trackbarWindowName, &G_MAX, 256, on_trackbar );
-        createTrackbar( "B_MIN", trackbarWindowName, &B_MIN, 256, on_trackbar );
-        createTrackbar( "B_MAX", trackbarWindowName, &B_MAX, 256, on_trackbar );
-    }else{
-        cerr << "Invalid ball_thres_method: " << ball_thres_method  << ". Valid methods: HSV, RGB" << endl;
-        return;
-    }
+    createTrackbar( "H_MIN", trackbarWindowName, &H_MIN, 256, on_trackbar );
+    createTrackbar( "H_MAX", trackbarWindowName, &H_MAX, 256, on_trackbar );
+    createTrackbar( "S_MIN", trackbarWindowName, &S_MIN, 256, on_trackbar );
+    createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, 256, on_trackbar );
+    createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, 256, on_trackbar );
+    createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, 256, on_trackbar );
+
     createTrackbar( "ERODE_DIAM", trackbarWindowName, &ERODE_DIAM, 30, on_trackbar );
     createTrackbar( "DILATE_DIAM", trackbarWindowName, &DILATE_DIAM, FRAME_HEIGHT, on_trackbar );
     createTrackbar( "MAX_NUM_OBJECTS", trackbarWindowName, &MAX_NUM_OBJECTS, 50, on_trackbar );

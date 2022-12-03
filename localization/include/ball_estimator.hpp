@@ -30,6 +30,7 @@ public:
         nh_.getParam("ball_est_max_recent_his_time", max_recent_his_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
         nh_.getParam("noise_overcoming_vel", noise_overcoming_vel);
+        nh_.getParam("short_window_size", short_window_size);
         nh_.getParam("max_valid_vel", max_valid_vel);
         nh_.getParam("ball_est_bounce_lost_coeff", bounce_lost_coeff);
         float freq;
@@ -156,9 +157,9 @@ private:
                 }
 
                 // reduce window length in one dim if the vel in that dim is large
-                if(recent_ball_pos_stamped_his.size() >= 3){ // only in this case can window length be shortened to 2 steps
-                    float dt = (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-3].timestamp).toSec();
-                    Eigen::Vector3f dp = recent_ball_pos_stamped_his.back().position - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-3].position;
+                if(recent_ball_pos_stamped_his.size() >= short_window_size){ // only in this case can window length be shortened to 1 step
+                    float dt = (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-short_window_size].timestamp).toSec();
+                    Eigen::Vector3f dp = recent_ball_pos_stamped_his.back().position - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-short_window_size].position;
                     for(int i=0; i<3; i++){
                         if(abs(cur_ball_vel_w(i)) > noise_overcoming_vel){ // then it can't be that both history are empty, otherwise vel = 0
                             cur_ball_vel_w(i) = dp(i) / dt;
@@ -223,6 +224,7 @@ private:
     float max_recent_his_time;
     float max_lost_time;
     float noise_overcoming_vel;
+    int short_window_size;
     float max_valid_vel;
     float bounce_lost_coeff;
 
