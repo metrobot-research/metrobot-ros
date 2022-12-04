@@ -39,7 +39,7 @@ public:
     void print() {
         if(!screen_)
             return;
-        LOG(INFO) << head_ << " " << "cur: " << curr_time << " " << "mean: " << meanTime << " " << "max: " << maxTime <<std::endl;
+        std::cout << head_ << " " << "cur: " << curr_time << " " << "mean: " << meanTime << " " << "max: " << maxTime << std::endl;
     }
 
 private:

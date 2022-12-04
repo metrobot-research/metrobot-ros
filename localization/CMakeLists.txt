@@ -28,8 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 set(ALL_TARGET_LIBRARIES "")
 include(cmake/eigen.cmake)
-include(cmake/glog.cmake)
-include(cmake/YAML.cmake)
+#include(cmake/glog.cmake)
 include(cmake/global_definition.cmake)
 include(cmake/PCL.cmake)
 include(cmake/OpenCV.cmake)

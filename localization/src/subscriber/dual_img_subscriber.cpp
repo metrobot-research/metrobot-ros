@@ -29,7 +29,7 @@ void DualImgSubscriber::msg_callback(const sensor_msgs::ImageConstPtr &msg1,
         cv_ImgPtr2 = cv_bridge::toCvShare(msg2);
     }
     catch (cv_bridge::Exception &e) {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
+        std::cout << "cv_bridge exception: " <<  e.what() << std::endl;
         return;
     }
     // only when saving imgs, use the following color converter

@@ -6,6 +6,5 @@
 
 const std::string WORK_SPACE_PATH = "@WORK_SPACE_PATH@";
 const std::string SAVE_PATH = WORK_SPACE_PATH + "/data/";
-const std::string CONFIG_YAML_PATH = WORK_SPACE_PATH + "/config/localization_params.yaml";
 
 #endif

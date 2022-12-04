@@ -27,8 +27,8 @@
   <!-- gyro 200/400 hz, accel 63/250 hz, depth 15/30 hz, color 15/30 hz -->
   <arg name="camera2_enable_accel"            default="false"/>
   <arg name="camera2_accel_fps"            default="250"/>
-  <arg name="camera2_enable_gyro"            default="false"/>
-  <arg name="camera2_gyro_fps"            default="400"/>
+  <arg name="camera2_enable_gyro"            default="true"/>
+  <arg name="camera2_gyro_fps"            default="200"/>
   <arg name="camera2_align_depth"            default="true"/>
   <arg name="camera2_color_width"               default="1280"/>
   <arg name="camera2_color_height"              default="720"/>

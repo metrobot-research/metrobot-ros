@@ -5,7 +5,7 @@
     <!--cam params-->
     <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
     <arg name="camera2_color_height"              default="480"/>
-    <arg name="camera2_color_fps"                 default="60"/>
+    <arg name="camera2_color_fps"                 default="6"/>
     <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
     <!-- HSV Ball Thresholding-->
@@ -22,6 +22,8 @@
     <arg name="min_obj_pix_diam" default="10"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
     <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
     <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
+    <!-- d435i lin vel estimation -->
+    <arg name="d435i_lin_vel_est_max_his_time" default="0.1"/>
     <!-- ball estimation -->
     <arg name="gnd_height" default="-0.87"/>  <!--TODO: synchronize wheel center data with dual img msg -->
     <arg name="ball_est_pred_mode" default="gravity"/> <!-- uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
@@ -31,7 +33,16 @@
     <arg name="short_window_size" default="3"/>
     <arg name="max_valid_vel" default="40"/>
     <arg name="ball_est_bounce_lost_coeff" default="0.45"/>
-
+    <!-- Control -->
+    <arg name="head_kp" default="1"/>
+    <arg name="head_ki" default="0"/>
+    <arg name="head_kd" default="0"/>
+    <arg name="head_kw" default="0"/>
+    <arg name="wheel_rot_kp" default="1"/>
+    <arg name="wheel_rot_ki" default="0"/>
+    <arg name="wheel_rot_kd" default="0"/>
+    <arg name="wheel_rot_kw" default="0"/>
+    
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
         <arg name="camera2_color_width"               default="$(arg camera2_color_width)"/>
@@ -64,6 +75,8 @@
         <param name="max_num_objs" value="$(arg max_num_objs)"/>
         <param name="min_obj_pix_diam" value="$(arg min_obj_pix_diam)"/>
         <param name="max_obj_percentage" value="$(arg max_obj_percentage)"/>
+        <!-- d435i lin vel estimation -->
+        <param name="d435i_lin_vel_est_max_his_time" value="$(arg d435i_lin_vel_est_max_his_time)"/>
         <!-- ball estimation -->
         <param name="gnd_height" value="$(arg gnd_height)"/> <!--TODO: synchronize wheel center data with dual img msg -->
         <param name="ball_est_pred_mode" value="$(arg ball_est_pred_mode)"/>
@@ -73,6 +86,15 @@
         <param name="short_window_size" value="$(arg short_window_size)"/>
         <param name="max_valid_vel" value="$(arg max_valid_vel)"/>
         <param name="ball_est_bounce_lost_coeff" value="$(arg ball_est_bounce_lost_coeff)"/>
+        <!-- Control -->
+        <param name="head_kp" value="$(arg head_kp)"/>
+        <param name="head_ki" value="$(arg head_ki)"/>
+        <param name="head_kd" value="$(arg head_kd)"/>
+        <param name="head_kw" value="$(arg head_kw)"/>
+        <param name="wheel_rot_kp" value="$(arg wheel_rot_kp)"/>
+        <param name="wheel_rot_ki" value="$(arg wheel_rot_ki)"/>
+        <param name="wheel_rot_kd" value="$(arg wheel_rot_kd)"/>
+        <param name="wheel_rot_kw" value="$(arg wheel_rot_kw)"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>

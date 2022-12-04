@@ -4,32 +4,26 @@
 
 #include <ros/ros.h>
 #include "localization_flow.h"
-#include "glog/logging.h"
-#include <yaml-cpp/yaml.h>
+//#include "glog/logging.h"
 #include "global_definition/global_definition.h"
-#include <Eigen/Core>
-#include <vector>
-#include <Eigen/Geometry>
 #include <iostream>
-#include <fstream>      // std::ifstream
-#include <stdio.h>
-#include <unistd.h>
+
 
 int main(int argc, char *argv[]){
     ros::init(argc, argv, "localization_node");
     ros::NodeHandle nh("~");
 
-    bool screen = false;
-    nh.param<bool>("screen", screen, "true");
-
-    google::InitGoogleLogging(argv[0]);
-    FLAGS_log_dir = WORK_SPACE_PATH + "/Log";
-    FLAGS_alsologtostderr = screen;
-    FLAGS_colorlogtostderr = true;
-    FLAGS_log_prefix = true;
-    FLAGS_logbufsecs = 0;
-
-    LOG(INFO) << "localization_node/screen: " << screen;
+//    bool screen = false;
+//    nh.param<bool>("screen", screen, "true");
+//
+//    google::InitGoogleLogging(argv[0]);
+//    FLAGS_log_dir = WORK_SPACE_PATH + "/Log";
+//    FLAGS_alsologtostderr = screen;
+//    FLAGS_colorlogtostderr = true;
+//    FLAGS_log_prefix = true;
+//    FLAGS_logbufsecs = 0;
+//
+//    LOG(INFO) << "localization_node/screen: " << screen;
 
     std::shared_ptr<LocalizationFlow> localization_flow_ptr = std::make_shared<LocalizationFlow>(nh);
 

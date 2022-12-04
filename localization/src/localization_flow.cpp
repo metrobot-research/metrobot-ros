@@ -12,11 +12,14 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     nh_(nh),
     rgb_d_sub_ptr_(std::make_shared<DualImgSubscriber>(nh_, "/d435i/color/image_raw", "/d435i/aligned_depth_to_color/image_raw", 20)),
     tf_listener_ptr_(std::make_shared<TFListener>()),
+    gyro_subscriber(std::make_shared<IMUSubscriber>(nh_, "/d435i/gyro/sample", 200)),
     tf_broadcast_ptr_(std::make_shared<TFBroadCaster>()),
     full_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/full_cloud", "/d435i_color_optical_frame", 20)),
     ball_cloud_pub_ptr_(std::make_shared<CloudPublisher>(nh_, "/ball_cloud", "/d435i_color_optical_frame", 20)),
     ball_vel_pub_ptr_(std::make_shared<ArrowPublisher>(nh_, "/ball_vel", "/t265_odom_frame", 20)),
-    ball_estimator(nh),
+    d435i_vel_pub_ptr_(std::make_shared<ArrowPublisher>(nh_, "/d435i_vel", "/t265_odom_frame", 20)),
+    d435i_lin_vel_estimator(nh_), ball_estimator(nh_),
+    head_controller_pid(nh_, "head"), wheel_rot_controller_pid(nh_, "wheel_rot"),
     cv_vis(false),
     check_point_cloud(false),
     found_ball(false),
@@ -24,10 +27,11 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     ball_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>()),
     time_run(std::make_shared<TicToc>("time per Run(): ", true)){
 
-    // visualization opt
+    ////---------------- visualization opt ----------------------------
     nh_.getParam("cv_vis", cv_vis);
     nh_.getParam("check_point_cloud", check_point_cloud);
 
+    ////---------------- cam params ---------------------------------
     // frame size
     nh_.getParam("camera2_color_width", FRAME_WIDTH);
     nh_.getParam("camera2_color_height", FRAME_HEIGHT);
@@ -54,6 +58,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     }
     K_inv = K.inverse();
 
+    //// ---------------------- cv ball detection params ---------------------
     // valid z dis of depth img
     if(FRAME_WIDTH == 1280)
         clip_z_dis[0] = 0.25; // slightly smaller than min dis in datasheet
@@ -62,6 +67,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     nh_.getParam("camera2_clip_distance", clip_z_dis[1]);
     if(clip_z_dis[1] < 0)
         clip_z_dis[1] = 30;
+
     // HSV ball thresholding
     nh_.getParam("H_MIN", H_MIN);
     nh_.getParam("H_MAX", H_MAX);
@@ -79,32 +85,22 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
     nh_.getParam("max_num_objs", MAX_NUM_OBJECTS); // for noise detection, too many obj -> too large noise
 
-    //create slider bars for HSV filtering
+    //// ---------- control-related params --------------------
+    Eigen::Matrix3f Rot_color_gyro; // gyro is d435i's gyro
+    Rot_color_gyro << 0,-1, 0,
+                      0, 0,-1,
+                      1, 0, 0;
+    R_color_gyro = Eigen::Quaternionf(Rot_color_gyro);
+
+    //create slider bars for real-time param tuning
     createTrackbars();
 }
 
 
 
 void LocalizationFlow::Run(){
-//    time_run->tic();
-    rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
-
-    if(!rgb_d_buffer_.empty()){
-        cur_rgbd_stamped = rgb_d_buffer_.back();
-        rgb_d_buffer_.clear();
-        cur_wheel_center = Eigen::Vector3f(0,0,0); // TODO: -----synchronize wheel center data with dual img msg------
-        nh_.getParam("gnd_height", cur_wheel_center.z());
-
-        try{
-            tf_listener_ptr_->lookupTransform("/t265_odom_frame", "/d435i_color_optical_frame", cur_rgbd_stamped.time, cur_d435i_pos, cur_d435i_ori);
-        }catch(tf2::LookupException &exc){ // wait until the camera boot node has fully started
-            return;
-        }catch(tf2::ConnectivityException &exc){
-            return;
-        }catch(tf2::ExtrapolationException &exc){
-            return;
-        }
-
+    time_run->tic();
+    if(readData()){
         if(check_point_cloud){ // only generate a full cloud from rgb+d to check alignment with realsense point cloud
             // Publish the whole point cloud for checking with Realsense point cloud.
             // Remember to enable "pointcloud" filter to publish Realsense point cloud
@@ -117,7 +113,7 @@ void LocalizationFlow::Run(){
 
             SegmentBall2D();
 
-            // update ball pos & vel estimate
+            // Estimate ball pos & vel
             if(found_ball){
                 GetBallCloud();
                 if(!ball_cloud_ptr->empty()){
@@ -139,18 +135,84 @@ void LocalizationFlow::Run(){
                 ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
             }
 
-            // TODO: calc control input
-
+            // Calc control cmd
+            calcControlCmd();
         }
     }
-//    time_run->toc();
+    time_run->toc();
+}
+
+bool LocalizationFlow::readData(){
+    /* reads and synchronizes msgs to the last rgb_d msg
+     * If successful, will store data to all the "cur" data var.s and return true
+     * Otherwise, return false
+     * */
+
+    // get data from subscribers and tf
+    gyro_subscriber->ParseData(gyro_buffer_);
+    cur_wheel_center = Eigen::Vector3f(0,0,0); // TODO: -----synchronize wheel center data with dual img msg------
+    nh_.getParam("gnd_height", cur_wheel_center.z());
+    neck_ang_vel_w_pitch = 0; // TODO: ------- get it from subscriber---------
+    rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
+    if(rgb_d_buffer_.empty())
+        return false;
+    else{
+        cur_rgbd_stamped = rgb_d_buffer_.back();
+        rgb_d_buffer_.clear();
+    }
+    try{
+        tf_listener_ptr_->lookupTransform("/t265_odom_frame", "/d435i_color_optical_frame", cur_rgbd_stamped.time, cur_d435i_pos, cur_d435i_ori);
+    }catch(tf2::LookupException &exc){ // wait until the camera boot node has fully started
+        return false;
+    }catch(tf2::ConnectivityException &exc){
+        return false;
+    }catch(tf2::ExtrapolationException &exc){
+        return false;
+    }
+
+    d435i_lin_vel_estimator.addPos(cur_rgbd_stamped.time, cur_d435i_pos);
+    cur_d435i_lin_vel = d435i_lin_vel_estimator.getCurVel();
+    d435i_vel_pub_ptr_->Publish(cur_d435i_pos, cur_d435i_pos + cur_d435i_lin_vel, cur_rgbd_stamped.time);
+
+    // synchronize gyro and wheel_center to the last rgb_d msg
+    if(gyro_buffer_.empty()) // todo: when wheel center is subscribed, also add wheel_center_buffer_.empty()
+        return false;
+    else{
+        //sync gyro
+        bool has_gyro = false;
+        while(!gyro_buffer_.empty()){
+            if(gyro_buffer_.front().timestamp < cur_rgbd_stamped.time)
+                gyro_buffer_.pop_front();
+            else{
+                cur_d435i_ang_vel = R_color_gyro * gyro_buffer_.front().angular_velocity;
+                has_gyro = true;
+                break;
+            }
+        }
+        if(!has_gyro){
+            cout << "all gyro outdated!----------";
+            return false;
+        }
+
+    // TODO: sync wheel center and neck ang vel pitch
+    }
+
+    // pop outdated data to avoid occupying too much memory
+    while(gyro_buffer_.size() > 600)
+        gyro_buffer_.pop_front();
+    while(wheel_center_buffer_.size() > 300)
+        wheel_center_buffer_.pop_front();
+    while(rgb_d_buffer_.size() > 60)
+        rgb_d_buffer_.pop_front();
+
+    return true;
 }
 
 void LocalizationFlow::GenerateFullPointCloud(){
     cv_bridge::CvImageConstPtr rgb_ptr = cur_rgbd_stamped.img1_ptr;
     cv_bridge::CvImageConstPtr depth_ptr = cur_rgbd_stamped.img2_ptr;
 
-//    LOG(INFO) << depth_ptr->image.depth() << ", " << depth_ptr->image.channels();
+//    cout << depth_ptr->image.depth() << ", " << depth_ptr->image.channels() << endl;
 
 //    double timestamp = rgb_ptr->header.stamp.toSec();
 //    std::string image_path = SAVE_PATH + "rgb/" + std::to_string(uint64_t(timestamp * 1e9)) + ".bmp";
@@ -280,6 +342,8 @@ void LocalizationFlow::CalcBallCenter3D(){ // Get center of ball in world coordi
         cerr << "-------- ball cloud of size 0 when ball is detected! ----------" << endl;
 }
 
+//// ----------------- Functions for cv -----------------------------
+
 std::string LocalizationFlow::intToString(int number){
     std::stringstream ss;
     ss << number;
@@ -289,20 +353,6 @@ std::string LocalizationFlow::intToString(int number){
 void LocalizationFlow::createTrackbars(){
     //create window for trackbars
     namedWindow(trackbarWindowName,0);
-    //create memory to store trackbar name on window
-    char TrackbarName[50];
-    sprintf( TrackbarName, "H_MIN", H_MIN);
-    sprintf( TrackbarName, "H_MAX", H_MAX);
-    sprintf( TrackbarName, "S_MIN", S_MIN);
-    sprintf( TrackbarName, "S_MAX", S_MAX);
-    sprintf( TrackbarName, "V_MIN", V_MIN);
-    sprintf( TrackbarName, "V_MAX", V_MAX);
-
-    sprintf( TrackbarName, "ERODE_DIAM", ERODE_DIAM);
-    sprintf( TrackbarName, "DILATE_DIAM", DILATE_DIAM);
-    sprintf( TrackbarName, "MAX_NUM_OBJECTS", MAX_NUM_OBJECTS);
-    sprintf( TrackbarName, "MIN_OBJ_PIX_DIAM", MIN_OBJ_PIX_DIAM);
-    sprintf( TrackbarName, "MAX_OBJ_PERCENTAGE", MAX_OBJ_PERCENTAGE);
 
     //create trackbars and insert them into window
     //3 parameters are: the address of the variable that is changing when the trackbar is moved(eg.H_LOW),
@@ -382,7 +432,7 @@ void LocalizationFlow::trackFilteredObject(int &x, int &y, Mat threshold, Mat &c
 
     if (hierarchy.size() > 0) {
         int numObjects = hierarchy.size();
-//        LOG(INFO) << "numObjects: " << numObjects;
+//        cout << "numObjects: " << numObjects << endl;
         //if number of objects greater than MAX_NUM_OBJECTS we have a noisy filter
         if(numObjects<MAX_NUM_OBJECTS){
             for (int index = 0; index >= 0; index = hierarchy[index][0]) {
@@ -413,4 +463,38 @@ void LocalizationFlow::trackFilteredObject(int &x, int &y, Mat threshold, Mat &c
         }else
             putText(cameraFeed,"TOO MUCH NOISE! ADJUST FILTER",Point(0,50),1,2,Scalar(0,0,255),2);
     }
+}
+
+//// -------------- Functions for control -------------------------
+void LocalizationFlow::calcControlCmd(){
+    Eigen::Vector3f d435i_p_d435i_ball = cur_d435i_ori.inverse() * (ball_center - cur_d435i_pos);
+    Eigen::Vector3f d435i_p_d435i_ball_yz(0, d435i_p_d435i_ball.y(), d435i_p_d435i_ball.z());
+    Eigen::Vector3f d435i_v_d435iw_ball = cur_d435i_ori.inverse() * (ball_estimator.getCurBallVel() - cur_d435i_lin_vel);
+    float omg_neck_ball_pitch = d435i_p_d435i_ball_yz.cross(d435i_v_d435iw_ball).x() / pow(d435i_p_d435i_ball_yz.norm(),2) - neck_ang_vel_w_pitch;
+
+    float pitch_e = atan2(-d435i_p_d435i_ball.y(), d435i_p_d435i_ball.z());
+    float head_motor_vel = omg_neck_ball_pitch + head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
+
+    Eigen::Matrix3f R_w_d435i(cur_d435i_ori);
+    Eigen::Matrix3f R_w_d435iwh = Eigen::Matrix3f::Identity();
+    Eigen::Vector3f y_vec = R_w_d435i.block(0,1,3,1);
+    float deviation_from_vertical = y_vec.dot(Eigen::Vector3f(0,0,-1));
+    if(R_w_d435i(2,2) < 0){
+        Eigen::Quaternionf corr_rot(cos(deviation_from_vertical),sin(deviation_from_vertical),0,0);
+        Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
+        R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
+        R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
+    }else{
+        Eigen::Quaternionf corr_rot(cos(-deviation_from_vertical),sin(-deviation_from_vertical),0,0);
+        Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
+        R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
+        R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
+    }
+    Eigen::Vector3f d435iwh_p_d435i_ball = R_w_d435iwh.transpose() * (ball_center - cur_d435i_pos);
+    Eigen::Vector3f d435iwh_p_d435i_ball_xy(d435iwh_p_d435i_ball.x(), d435iwh_p_d435i_ball.y(), 0);
+    Eigen::Vector3f d435iwh_v_d435iwh_ball = R_w_d435iwh.transpose() * (ball_estimator.getCurBallVel() - cur_d435i_lin_vel);
+    float omg_d435iwh_ball_yaw = d435iwh_p_d435i_ball_xy.cross(d435iwh_v_d435iwh_ball).z() - (cur_d435i_ori.inverse() * cur_d435i_ang_vel).z();
+
+    float yaw_e = atan2(-d435i_p_d435i_ball.x(), d435i_p_d435i_ball.z());
+    float wheel_ang_vel = omg_d435iwh_ball_yaw + wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
 }

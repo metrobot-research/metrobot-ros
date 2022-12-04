@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include "glog/logging.h"
+//#include "glog/logging.h"
 #include "global_definition/global_definition.h"
 #include "subscriber/img_saver.hpp"
 
@@ -8,15 +8,15 @@ int main(int argc, char *argv[]) {
     ros::init(argc, argv, "img_save_node");
     ros::NodeHandle nh("~");
 
-    bool screen = false;
-    nh.param<bool>("screen", screen, "true");
-
-    google::InitGoogleLogging(argv[0]);
-    FLAGS_log_dir = WORK_SPACE_PATH + "/Log";
-    FLAGS_alsologtostderr = screen;
-    FLAGS_colorlogtostderr = true;
-    FLAGS_log_prefix = true;
-    FLAGS_logbufsecs = 0;
+//    bool screen = false;
+//    nh.param<bool>("screen", screen, "true");
+//
+//    google::InitGoogleLogging(argv[0]);
+//    FLAGS_log_dir = WORK_SPACE_PATH + "/Log";
+//    FLAGS_alsologtostderr = screen;
+//    FLAGS_colorlogtostderr = true;
+//    FLAGS_log_prefix = true;
+//    FLAGS_logbufsecs = 0;
 
 //    Config::readConfig();
 

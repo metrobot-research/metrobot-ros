@@ -5,6 +5,7 @@
 // subscriber
 #include "subscriber/dual_img_subscriber.hpp"
 #include "subscriber/tf_listener.hpp"
+#include "subscriber/imu_subscriber.hpp"
 // publisher
 #include "publisher/cloud_publisher.hpp"
 #include "publisher/arrow_publisher.hpp"
@@ -13,8 +14,11 @@
 #include <sensor_msgs/CameraInfo.h>
 #include "sensor_data/cloud_data.hpp"
 #include "sensor_data/dual_img_stamped.hpp"
-// ball estimator
+// estimators
+#include "d435i_lin_vel_estimator.hpp"
 #include "ball_estimator.hpp"
+//controllers
+#include "pid.hpp"
 // yaml
 #include <yaml-cpp/yaml.h>
 // tools
@@ -28,6 +32,7 @@ public:
     LocalizationFlow(ros::NodeHandle &nh);
 
     void Run();
+    bool readData();
 
     // for rviz
     void GenerateFullPointCloud();
@@ -48,6 +53,8 @@ public:
     void morphOps(Mat &thresh);
     void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed);
 
+    void calcControlCmd();
+
 private:
     // node handle
     ros::NodeHandle nh_;
@@ -56,6 +63,7 @@ private:
     // subscriber
     std::shared_ptr<DualImgSubscriber> rgb_d_sub_ptr_;
     std::shared_ptr<TFListener> tf_listener_ptr_;
+    std::shared_ptr<IMUSubscriber> gyro_subscriber;
     // publisher
     //   for use
     std::shared_ptr<TFBroadCaster> tf_broadcast_ptr_;
@@ -63,8 +71,15 @@ private:
     std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
     std::shared_ptr<ArrowPublisher> ball_vel_pub_ptr_;
-    // ball estimator
+    std::shared_ptr<ArrowPublisher> d435i_vel_pub_ptr_;
+    // estimators
+    D435iLinVelEstimator d435i_lin_vel_estimator;
     BallEstimator ball_estimator;
+    // controllers
+    PID head_controller_pid; // feedforward term is more easily calculated in LocalizationFlow class, can be added to the PID output
+    PID wheel_rot_controller_pid;
+    // R_color_gyro
+    Eigen::Quaternionf R_color_gyro;
 
     // params
     // visualization opt
@@ -104,12 +119,16 @@ private:
 
     // data processing flow
     // read in bgr & depth imgs, and wheel_center
+    std::deque<IMUData> gyro_buffer_;
     std::deque<DualImgStamped> rgb_d_buffer_;
     DualImgStamped cur_rgbd_stamped;
     Eigen::Vector3f cur_d435i_pos;
     Eigen::Quaternionf cur_d435i_ori;
+    Eigen::Vector3f cur_d435i_lin_vel;
+    Eigen::Vector3f cur_d435i_ang_vel; // expressed in color optical frame
     std::deque<Eigen::Vector3f> wheel_center_buffer_;
     Eigen::Vector3f cur_wheel_center;
+    float neck_ang_vel_w_pitch;
     // SegmentBall2D
     bool found_ball;
     int ball_i2D, ball_j2D;
