@@ -1,0 +1,59 @@
+<launch>
+    <!--visualization-->
+    <arg name="cv_vis" default="false"/>
+    <arg name="check_point_cloud" default="false"/>
+    <!--cam params-->
+    <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
+    <arg name="camera2_color_height"              default="480"/>
+    <arg name="camera2_color_fps"                 default="6"/>
+    <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
+    <arg name="camera2_clip_distance"             default="-2"/>
+    <!-- HSV Ball Thresholding-->
+    <arg name="H_MIN" default="78"/>
+    <arg name="H_MAX" default="99"/>
+    <arg name="S_MIN" default="86"/>
+    <arg name="S_MAX" default="164"/>
+    <arg name="V_MIN" default="62"/>
+    <arg name="V_MAX" default="233"/>
+    <!-- obj filtering-->
+    <arg name="useMorphOps" default="true"/>
+    <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
+    <arg name="dilate_diam" default="10"/> <!--pix elements larger than this will be dilated-->
+    <arg name="min_obj_pix_diam" default="10"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
+    <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
+    <!-- d435i lin vel estimation -->
+    <arg name="d435i_lin_vel_est_max_his_time" default="0.1"/>
+    <!-- ball estimation -->
+    <arg name="gnd_height" default="-0.87"/>  <!--TODO: synchronize wheel center data with dual img msg -->
+    <arg name="ball_est_pred_mode" default="gravity"/> <!-- uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
+    <arg name="ball_est_max_recent_his_time" default="0.5"/>
+    <arg name="ball_est_max_lost_time" default="1"/>
+    <arg name="noise_overcoming_vel" default="0.3"/>
+    <arg name="short_window_size" default="3"/>
+    <arg name="max_valid_vel" default="40"/>
+    <arg name="ball_est_bounce_lost_coeff" default="0.45"/>
+    <!-- Control -->
+    <arg name="head_kp" default="1"/>
+    <arg name="head_ki" default="0"/>
+    <arg name="head_kd" default="0"/>
+    <arg name="head_kw" default="0"/>
+    <arg name="wheel_rot_kp" default="1"/>
+    <arg name="wheel_rot_ki" default="0"/>
+    <arg name="wheel_rot_kd" default="0"/>
+    <arg name="wheel_rot_kw" default="0"/>
+    
+
+    <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
+        <arg name="camera2_color_width"               default="$(arg camera2_color_width)"/>
+        <arg name="camera2_color_height"              default="$(arg camera2_color_height)"/>
+        <arg name="camera2_color_fps"                 default="$(arg camera2_color_fps)"/>
+        <arg name="camera2_filters"              default="$(arg camera2_filters)"/>
+        <arg name="camera2_clip_distance"             default="$(arg camera2_clip_distance)"/>
+    </include>
+
+
+
+    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find localization)/rviz/d435i_and_t265.rviz" output="screen"/>
+
+</launch>
