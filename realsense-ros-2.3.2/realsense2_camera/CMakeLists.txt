@@ -21,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
     tf
     ddynamic_reconfigure
     diagnostic_updater
-    OpenCV  REQUIRED
+    OpenCV REQUIRED
     )
 
 if(BUILD_WITH_OPENMP)
