@@ -485,12 +485,12 @@ void LocalizationFlow::calcControlCmd(){
     Eigen::Vector3f y_vec = R_w_d435i.block(0,1,3,1);
     float deviation_from_vertical = acos(abs(y_vec.dot(Eigen::Vector3f(0,0,-1))));
     if(R_w_d435i(2,2) < 0){
-        Eigen::Quaternionf corr_rot(cos(deviation_from_vertical),sin(deviation_from_vertical),0,0);
+        Eigen::Quaternionf corr_rot(cos(deviation_from_vertical/2),sin(deviation_from_vertical/2),0,0);
         Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
         R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
         R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
     }else{
-        Eigen::Quaternionf corr_rot(cos(-deviation_from_vertical),sin(-deviation_from_vertical),0,0);
+        Eigen::Quaternionf corr_rot(cos(-deviation_from_vertical/2),sin(-deviation_from_vertical/2),0,0);
         Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
         R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
         R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
