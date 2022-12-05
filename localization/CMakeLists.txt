@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(localization)
 message("start make localization")
 
-# 一定要加-march=native， 不然使用pcl的一些函数会报错
+# Must add "-march=native"，or we'll get errors while using some pcl func.s
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -march=native")
 set(CMAKE_CXX_STANDARD 17)
 #add_definitions(-DCPP11)
@@ -23,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
         geometry_msgs
         visualization_msgs
 #        customized_msgs
-        message_filters # Topic同步
+        message_filters # Topic Synchronization
         )
 
 set(ALL_TARGET_LIBRARIES "")
