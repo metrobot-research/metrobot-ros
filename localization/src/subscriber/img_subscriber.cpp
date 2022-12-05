@@ -1,5 +1,5 @@
 #include "subscriber/img_subscriber.hpp"
-#include "glog/logging.h"
+//#include "glog/logging.h"
 
 ImgSubscriber::ImgSubscriber(ros::NodeHandle &nh, std::string topic_name, size_t buff_size)
         : nh_(nh) {

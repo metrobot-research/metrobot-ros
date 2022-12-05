@@ -1,6 +1,6 @@
 #include "subscriber/cloud_subscriber.hpp"
 
-#include "glog/logging.h"
+//#include "glog/logging.h"
 
 CloudSubscriber::CloudSubscriber(ros::NodeHandle &nh, std::string topic_name, size_t buff_size)
         : nh_(nh) {

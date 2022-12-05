@@ -5,7 +5,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <chrono>
-#include "glog/logging.h"
+//#include "glog/logging.h"
 
 class TicToc {
 public:

@@ -1,7 +1,7 @@
 #include "localization_flow.h"
 //#include "localization_config.h"
 #include <pcl/common/transforms.h>
-#include "glog/logging.h"
+//#include "glog/logging.h"
 #include "global_definition/global_definition.h"
 
 #include <opencv2/highgui/highgui.hpp>
@@ -26,6 +26,8 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     full_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>()),
     ball_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>()),
     time_run(std::make_shared<TicToc>("time per Run(): ", true)){
+
+    cmd_publisher = nh_.advertise<customized_msgs::cmd>("/cmd", 20);
 
     ////---------------- visualization opt ----------------------------
     nh_.getParam("cv_vis", cv_vis);
@@ -99,7 +101,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
 
 
 void LocalizationFlow::Run(){
-    time_run->tic();
+//    time_run->tic();
     if(readData()){
         if(check_point_cloud){ // only generate a full cloud from rgb+d to check alignment with realsense point cloud
             // Publish the whole point cloud for checking with Realsense point cloud.
@@ -139,7 +141,7 @@ void LocalizationFlow::Run(){
             calcControlCmd();
         }
     }
-    time_run->toc();
+//    time_run->toc();
 }
 
 bool LocalizationFlow::readData(){
@@ -475,20 +477,20 @@ void LocalizationFlow::calcControlCmd(){
 
     float pitch_e = atan2(-d435i_p_d435i_ball.y(), d435i_p_d435i_ball.z());
 //    float head_motor_vel = omg_neck_ball_pitch + head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
-    float head_motor_vel = head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
+    cmd.headVel = head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
 
     // Wheel rot
     Eigen::Matrix3f R_w_d435i(cur_d435i_ori);
     Eigen::Matrix3f R_w_d435iwh = Eigen::Matrix3f::Identity();
     Eigen::Vector3f y_vec = R_w_d435i.block(0,1,3,1);
-    float deviation_from_vertical = y_vec.dot(Eigen::Vector3f(0,0,-1));
+    float deviation_from_vertical = acos(abs(y_vec.dot(Eigen::Vector3f(0,0,-1))));
     if(R_w_d435i(2,2) < 0){
-        Eigen::Quaternionf corr_rot(cos(-deviation_from_vertical),sin(-deviation_from_vertical),0,0);
+        Eigen::Quaternionf corr_rot(cos(deviation_from_vertical),sin(deviation_from_vertical),0,0);
         Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
         R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
         R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
     }else{
-        Eigen::Quaternionf corr_rot(cos(deviation_from_vertical),sin(deviation_from_vertical),0,0);
+        Eigen::Quaternionf corr_rot(cos(-deviation_from_vertical),sin(-deviation_from_vertical),0,0);
         Eigen::Matrix3f R_w_d435iwh_inverted(cur_d435i_ori * corr_rot);
         R_w_d435iwh.block(0,0,3,1) = R_w_d435iwh_inverted.block(0,2,3,1);
         R_w_d435iwh.block(0,1,3,1) = -R_w_d435iwh_inverted.block(0,0,3,1);
@@ -502,5 +504,7 @@ void LocalizationFlow::calcControlCmd(){
 
     float yaw_e = atan2(d435iwh_p_d435i_ball.y(), d435iwh_p_d435i_ball.x());
 //    float wheel_ang_vel = omg_d435iwh_ball_yaw + wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
-    float wheel_ang_vel = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
+    cmd.wheelRot = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
+
+    cmd_publisher.publish(cmd);
 }

@@ -19,6 +19,7 @@
 #include "ball_estimator.hpp"
 //controllers
 #include "pid.hpp"
+#include <customized_msgs/cmd.h>
 // yaml
 #include <yaml-cpp/yaml.h>
 // tools
@@ -67,6 +68,7 @@ private:
     // publisher
     //   for use
     std::shared_ptr<TFBroadCaster> tf_broadcast_ptr_;
+    ros::Publisher cmd_publisher;
     //   for rviz
     std::shared_ptr<CloudPublisher> full_cloud_pub_ptr_;
     std::shared_ptr<CloudPublisher> ball_cloud_pub_ptr_;
@@ -137,6 +139,9 @@ private:
     // GetBallCenter3D
     pcl::PointCloud<pcl::PointXYZ>::Ptr ball_cloud_ptr;
     Eigen::Vector3f ball_center;
+    // calcControlCmd
+    customized_msgs::cmd cmd;
+
 
     // for rviz
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr full_cloud_ptr;

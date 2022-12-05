@@ -5,8 +5,8 @@
     <!--cam params-->
     <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
     <arg name="camera2_color_height"              default="480"/>
-    <arg name="camera2_color_fps"                 default="6"/>
-    <arg name="camera2_filters"              default="pointcloud,decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
+    <arg name="camera2_color_fps"                 default="60"/>
+    <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
     <!-- HSV Ball Thresholding-->
     <arg name="H_MIN" default="78"/>

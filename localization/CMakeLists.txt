@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
         sensor_msgs
         geometry_msgs
         visualization_msgs
-#        customized_msgs
+        customized_msgs
         message_filters # Topic Synchronization
         )
 

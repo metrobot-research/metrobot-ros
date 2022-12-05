@@ -2,7 +2,7 @@
 
 #include <Eigen/Dense>
 #include <utility>
-#include "glog/logging.h"
+//#include "glog/logging.h"
 
 PosePublisher::PosePublisher(ros::NodeHandle &nh,
                              const std::string& topic_name,

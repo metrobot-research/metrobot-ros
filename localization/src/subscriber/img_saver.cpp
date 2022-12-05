@@ -1,5 +1,5 @@
 #include "subscriber/img_saver.hpp"
-#include "glog/logging.h"
+//#include "glog/logging.h"
 #include "global_definition/global_definition.h"
 #include <opencv2/highgui/highgui.hpp>
 #include <utility>
