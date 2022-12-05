@@ -43,7 +43,7 @@ public:
 
         float his_length = (pos_stamped_his.back().timestamp - pos_stamped_his.front().timestamp).toSec();
 
-        if( his_length > max_his_time - frame_dt * 2){
+        if( his_length > max_his_time - frame_dt){
             cur_lin_vel_w = (pos_stamped_his.back().position - pos_stamped_his.front().position) / his_length;
         }else{
             cur_lin_vel_w.setZero();

@@ -24,18 +24,22 @@ public:
             nh_(nh), give_up(true), lost_time(0), has_inited(false), step_time(0), recent_his_time(0),
             cur_ball_vel_w(0,0,0)
 //            ofs("/home/warren/Documents/code/ME206A_Proj/catkin_chicken_robot/src/localization/data/vel/vel.csv")
-            {
+    {
+
+        float freq;
+        nh_.getParam("camera2_color_fps", freq);
+        frame_dt = 1. / freq;
 
         nh_.getParam("ball_est_pred_mode", pred_mode);
         nh_.getParam("ball_est_max_recent_his_time", max_recent_his_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
-        nh_.getParam("noise_overcoming_vel", noise_overcoming_vel);
-        nh_.getParam("short_window_size", short_window_size);
-        nh_.getParam("max_valid_vel", max_valid_vel);
+        nh_.getParam("ball_est_noise_overcoming_vel", noise_overcoming_vel);
+        float ball_est_short_window_time;
+        nh_.getParam("ball_est_short_window_time", ball_est_short_window_time);
+        short_window_size = ball_est_short_window_time / frame_dt + 1;
+//        nh_.getParam("ball_est_max_valid_z_vel", max_valid_z_vel);
+//        nh_.getParam("ball_est_max_valid_xy_vel", max_valid_xy_vel);
         nh_.getParam("ball_est_bounce_lost_coeff", bounce_lost_coeff);
-        float freq;
-        nh_.getParam("camera2_color_fps", freq);
-        frame_dt = 1. / freq;
 
         recent_ball_pos_stamped_his.clear();
         old_ball_pos_stamped_his.clear();
@@ -48,13 +52,14 @@ public:
             step_time = (timestamp - last_time).toSec();
 
             // check whether the measurement is a spike, if yes, then this frame should be considered as lost
-            if( (timestamp - latest_measurement.timestamp).toSec() < 0.2 ){
-                float vel = (new_ball_pos_w - latest_measurement.position).norm() / (timestamp - latest_measurement.timestamp).toSec();
-                if(vel > max_valid_vel){
-                    addLost(timestamp, new_wheel_center_w);
-                    return;
-                }
-            }
+            // can only help if there's no distraction
+//            if( (timestamp - latest_measurement.timestamp).toSec() < 0.2 ){
+//                Eigen::Vector3f measured_vel = (new_ball_pos_w - latest_measurement.position) / (timestamp - latest_measurement.timestamp).toSec();
+//                if((measured_vel.z() > max_valid_z_vel) || (measured_vel.block(0,0,2,1).norm() > max_valid_xy_vel)){
+//                    addLost(timestamp, new_wheel_center_w);
+//                    return;
+//                }
+//            }
         }
         last_time = timestamp;
 
@@ -147,7 +152,7 @@ private:
                 // cur ball pos is definitely the latest measurement
                 cur_ball_pos_w = recent_ball_pos_stamped_his.back().position;
                 // cur ball vel estimate is handled case by case
-                if(recent_his_time > max_recent_his_time - frame_dt * 2){ // moving window long enough
+                if(recent_his_time > max_recent_his_time - frame_dt){ // moving window long enough
                     cur_ball_vel_w = (recent_ball_pos_stamped_his.back().position - recent_ball_pos_stamped_his.front().position) / recent_his_time;
                 }else if(!old_ball_pos_stamped_his.empty()){ // moving window not long enough, lengthen the window
                     float vel_dt = (recent_ball_pos_stamped_his.back().timestamp - old_ball_pos_stamped_his.back().timestamp).toSec();
@@ -157,7 +162,7 @@ private:
                 }
 
                 // reduce window length in one dim if the vel in that dim is large
-                if(recent_ball_pos_stamped_his.size() >= short_window_size){ // only in this case can window length be shortened to 1 step
+                if(recent_ball_pos_stamped_his.size() >= short_window_size){ // if recent history too short, we would have already used old history -> dt cannot be shortened
                     float dt = (recent_ball_pos_stamped_his.back().timestamp - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-short_window_size].timestamp).toSec();
                     Eigen::Vector3f dp = recent_ball_pos_stamped_his.back().position - recent_ball_pos_stamped_his[recent_ball_pos_stamped_his.size()-short_window_size].position;
                     for(int i=0; i<3; i++){
@@ -183,6 +188,9 @@ private:
         if(pred_mode == "uniform"){
             cur_ball_pos_w = prev_ball_pos_w + step_time * prev_ball_vel_w;
             cur_ball_vel_w = prev_ball_vel_w;
+        }else if(pred_mode == "static"){
+            cur_ball_pos_w = prev_ball_pos_w;
+            cur_ball_vel_w.setZero();
         }else if(pred_mode == "gravity"){
             // Assume uniform velocity in x,y
             cur_ball_pos_w.block(0,0,2,1) = prev_ball_pos_w.block(0,0,2,1)
@@ -225,7 +233,7 @@ private:
     float max_lost_time;
     float noise_overcoming_vel;
     int short_window_size;
-    float max_valid_vel;
+//    float max_valid_z_vel, max_valid_xy_vel;
     float bounce_lost_coeff;
 
     float lost_time;
