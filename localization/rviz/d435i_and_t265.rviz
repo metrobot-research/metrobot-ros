@@ -102,7 +102,7 @@ Visualization Manager:
       Frames:
         All Enabled: false
         ball_real:
-          Value: false
+          Value: true
         base_link:
           Value: true
         camera_bottom_screw_frame:
@@ -111,6 +111,8 @@ Visualization Manager:
           Value: false
         d435i_aligned_depth_to_color_frame:
           Value: false
+        d435i_center:
+          Value: true
         d435i_color_frame:
           Value: false
         d435i_color_optical_frame:
@@ -162,6 +164,8 @@ Visualization Manager:
                 d435i_aligned_depth_to_color_frame:
                   d435i_color_optical_frame:
                     {}
+                d435i_center:
+                  {}
                 d435i_color_frame:
                   {}
                 d435i_depth_frame:

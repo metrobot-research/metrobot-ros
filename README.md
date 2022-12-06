@@ -64,6 +64,7 @@
             |-------------------------------------|-------|-------|-------|-------|-------|-------|
             | morning                             |   78  |   96  |   68  |  164  |  39   |  223  |
             | late afternoon OR elec light        |   78  |   99  |   86  |  164  |  62   |  233  |
+
         + at lab
           + | Lab, sunny,                         | H_MIN | H_MAX | S_MIN | S_MAX | V_MIN | V_MAX |
             |-------------------------------------|-------|-------|-------|-------|-------|-------|
@@ -80,6 +81,10 @@
             | exp 1000                       |   55  |   85  |  79   |  150  |  24   |  256  |
             | exp 800                        |   55  |   85  |  67   |  150  |  39   |  256  |
             | exp 700                    ☆   |   55  |   85  |  67   |  150  |  39   |  256  |
+        + at Michael's Home
+            + | Green ball, AutoExp                 | H_MIN | H_MAX | S_MIN | S_MAX | V_MIN | V_MAX |
+              |-------------------------------------|-------|-------|-------|-------|-------|-------|
+              | with spotlight off                  |   54  |   89  |   80  |  191  |  40   |  256  |
   
   + Ball Estimation Params:
     + ************** At warren's home *********************
@@ -96,7 +101,7 @@
       ```
       <arg name="d435i_lin_vel_est_max_his_time" default="0.2"/> <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt), 0.05 will be too noisy -->
       
-      <arg name="ball_est_max_recent_his_time" default="0.2"/>  <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt) -->
+      <arg name="ball_est_max_recent_his_time" default="0.25"/>  <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt) -->
       <arg name="ball_est_max_lost_time" default="1"/>
       <arg name="ball_est_noise_overcoming_vel" default="0.2"/>
       <arg name="ball_est_short_window_time" default="0.1"/> <!-- should > 1/fps -->
@@ -105,7 +110,7 @@
       ```
       <arg name="d435i_lin_vel_est_max_his_time" default="0.1"/> <!-- if fps=6Hz, set this to >0.5s, 0.05 will be too noisy -->
       
-      <arg name="ball_est_max_recent_his_time" default="0.3"/>  <!-- if fps=6Hz, set this to >0.4s -->
+      <arg name="ball_est_max_recent_his_time" default="0.25"/>  <!-- if fps=6Hz, set this to >0.4s -->
       <arg name="ball_est_max_lost_time" default="1"/>
       <arg name="ball_est_noise_overcoming_vel" default="0.2"/>
       <arg name="ball_est_short_window_time" default="0.1"/> <!-- should > 2*(1/fps) -->
