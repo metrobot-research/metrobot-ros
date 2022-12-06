@@ -87,19 +87,12 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
     nh_.getParam("max_num_objs", MAX_NUM_OBJECTS); // for noise detection, too many obj -> too large noise
 
-    //// ---------- control-related params --------------------
-    Eigen::Matrix3f Rot_color_gyro; // gyro is d435i's gyro
-    Rot_color_gyro << 0,-1, 0,
-                      0, 0,-1,
-                      1, 0, 0;
-    R_color_gyro = Eigen::Quaternionf(Rot_color_gyro);
-
     //create slider bars for real-time param tuning
     createTrackbars();
 }
 
 
-
+//// ------------- general data processing -----------------------
 void LocalizationFlow::Run(){
 //    time_run->tic();
     if(readData()){
@@ -186,7 +179,10 @@ bool LocalizationFlow::readData(){
             if(gyro_buffer_.front().timestamp < cur_rgbd_stamped.time)
                 gyro_buffer_.pop_front();
             else{
-                cur_d435i_ang_vel = R_color_gyro * gyro_buffer_.front().angular_velocity;
+                cur_d435i_ang_vel = gyro_buffer_.front().angular_velocity; // when align_depth_to_color is true, gyro is expresssed in gyro optical frame parallel to color optical frame
+//                cout << "d435i_ang_vel_color[deg/s]: " << cur_d435i_ang_vel.x() / M_PI * 180.
+//                                               << ", " << cur_d435i_ang_vel.y() / M_PI * 180.
+//                                               << ", " << cur_d435i_ang_vel.z() / M_PI * 180. << endl;
                 has_gyro = true;
                 break;
             }
@@ -345,7 +341,6 @@ void LocalizationFlow::CalcBallCenter3D(){ // Get center of ball in world coordi
 }
 
 //// ----------------- Functions for cv -----------------------------
-
 std::string LocalizationFlow::intToString(int number){
     std::stringstream ss;
     ss << number;

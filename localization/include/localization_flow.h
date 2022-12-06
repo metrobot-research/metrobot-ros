@@ -32,18 +32,18 @@ class LocalizationFlow{
 public:
     LocalizationFlow(ros::NodeHandle &nh);
 
+    //// -------- General Data Processing ---------------
     void Run();
     bool readData();
 
-    // for rviz
-    void GenerateFullPointCloud();
+    void GenerateFullPointCloud(); // for rviz pointcloud check only
 
-    // for use
     void updateParams();
     void SegmentBall2D();
     void GetBallCloud();
     void CalcBallCenter3D();
 
+    //// ------- Functions for cv --------------------
     static void on_trackbar( int, void* ){
         //This function gets called whenever a
         // trackbar position is changed
@@ -54,6 +54,7 @@ public:
     void morphOps(Mat &thresh);
     void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed);
 
+    //// ------- Functions for control --------------
     void calcControlCmd();
 
 private:
@@ -80,8 +81,6 @@ private:
     // controllers
     PID head_controller_pid; // feedforward term is more easily calculated in LocalizationFlow class, can be added to the PID output
     PID wheel_rot_controller_pid;
-    // R_color_gyro
-    Eigen::Quaternionf R_color_gyro;
 
     // params
     // visualization opt
