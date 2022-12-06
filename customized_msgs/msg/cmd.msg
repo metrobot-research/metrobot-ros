@@ -1,5 +1,8 @@
-float32 headVel
-float32 wheelRot
-float32 wheelFwd
-float32 hipVel
-float32 lowerneckVel
+std_msgs/Char state
+std_msgs/Char furtherState
+std_msgs/UInt16 lowerNeckPosition
+float32 fwdVelocityCommand
+float32 yawRateCommand
+float32 upperNeckVelocity
+std_msgs/UInt16 hipAngle
+std_msgs/UInt16 grasperAngle

@@ -29,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: ball_cloud
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -101,44 +101,46 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
+        ball_real:
           Value: false
+        base_link:
+          Value: true
         camera_bottom_screw_frame:
-          Value: true
+          Value: false
         camera_link:
-          Value: true
+          Value: false
         d435i_aligned_depth_to_color_frame:
           Value: false
         d435i_color_frame:
           Value: false
         d435i_color_optical_frame:
-          Value: false
+          Value: true
         d435i_depth_frame:
           Value: false
         d435i_depth_optical_frame:
-          Value: true
+          Value: false
         d435i_gyro_frame:
-          Value: true
+          Value: false
         d435i_gyro_optical_frame:
-          Value: true
+          Value: false
         d435i_link:
-          Value: false
+          Value: true
         d435iwh:
-          Value: true
-        t265_accel_frame:
-          Value: true
-        t265_accel_optical_frame:
-          Value: true
-        t265_gyro_frame:
-          Value: true
-        t265_gyro_optical_frame:
-          Value: true
-        t265_link:
           Value: false
+        t265_accel_frame:
+          Value: false
+        t265_accel_optical_frame:
+          Value: false
+        t265_gyro_frame:
+          Value: false
+        t265_gyro_optical_frame:
+          Value: false
+        t265_link:
+          Value: true
         t265_odom_frame:
-          Value: true
+          Value: false
         t265_pose_frame:
-          Value: true
+          Value: false
       Marker Scale: 0.20000000298023224
       Name: TF
       Show Arrows: true
@@ -146,6 +148,8 @@ Visualization Manager:
       Show Names: true
       Tree:
         t265_odom_frame:
+          ball_real:
+            {}
           d435iwh:
             {}
           t265_pose_frame:
@@ -322,7 +326,7 @@ Visualization Manager:
       Marker Topic: /ball_vel
       Name: ball_vel
       Namespaces:
-        {}
+        my_namespace: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -361,25 +365,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.7873029708862305
+      Distance: 1.2506301403045654
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.31501585245132446
-        Y: 0.07722170650959015
-        Z: 0.1210155040025711
+        X: 0.16817066073417664
+        Y: 0.16673652827739716
+        Z: 0.08498495072126389
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7953966856002808
+      Pitch: 0.49039700627326965
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.7885745763778687
+      Yaw: 1.6635750532150269
     Saved: ~
 Window Geometry:
   Displays:
