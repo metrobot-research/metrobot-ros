@@ -35,14 +35,23 @@
 <!--    <arg name="ball_est_max_valid_xy_vel" default="2"/>-->
     <arg name="ball_est_bounce_lost_coeff" default="0.45"/>
     <!-- Control -->
+    <!--    head -->
     <arg name="head_kp" default="1"/>
     <arg name="head_ki" default="0"/>
     <arg name="head_kd" default="0"/>
     <arg name="head_kw" default="0"/>
+    <!--    wheel_rot -->
     <arg name="wheel_rot_kp" default="1"/>
     <arg name="wheel_rot_ki" default="0"/>
     <arg name="wheel_rot_kd" default="0"/>
     <arg name="wheel_rot_kw" default="0"/>
+    <!--    wheel_fwd -->
+    <arg name="wheel_fwd_kp" default="1"/>
+    <arg name="wheel_fwd_ki" default="0"/>
+    <arg name="wheel_fwd_kd" default="0"/>
+    <arg name="wheel_fwd_kw" default="0"/>
+    <!--    execution limits -->
+    <arg name="max_fwd_vel" value="0.2"/>
     
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
@@ -89,14 +98,23 @@
 <!--        <param name="ball_est_max_valid_xy_vel" value="$(arg ball_est_max_valid_xy_vel)"/>-->
         <param name="ball_est_bounce_lost_coeff" value="$(arg ball_est_bounce_lost_coeff)"/>
         <!-- Control -->
+        <!--    head -->
         <param name="head_kp" value="$(arg head_kp)"/>
         <param name="head_ki" value="$(arg head_ki)"/>
         <param name="head_kd" value="$(arg head_kd)"/>
         <param name="head_kw" value="$(arg head_kw)"/>
+        <!--    wheel_rot -->
         <param name="wheel_rot_kp" value="$(arg wheel_rot_kp)"/>
         <param name="wheel_rot_ki" value="$(arg wheel_rot_ki)"/>
         <param name="wheel_rot_kd" value="$(arg wheel_rot_kd)"/>
         <param name="wheel_rot_kw" value="$(arg wheel_rot_kw)"/>
+        <!--    wheel_fwd -->
+        <param name="wheel_fwd_kp" value="$(arg wheel_fwd_kp)"/>
+        <param name="wheel_fwd_ki" value="$(arg wheel_fwd_ki)"/>
+        <param name="wheel_fwd_kd" value="$(arg wheel_fwd_kd)"/>
+        <param name="wheel_fwd_kw" value="$(arg wheel_fwd_kw)"/>
+        <!--    execution limits -->
+        <param name="max_fwd_vel" value="$(arg max_fwd_vel)"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>

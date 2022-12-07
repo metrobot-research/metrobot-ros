@@ -81,6 +81,7 @@ private:
     // controllers
     PID head_controller_pid; // feedforward term is more easily calculated in LocalizationFlow class, can be added to the PID output
     PID wheel_rot_controller_pid;
+    PID wheel_fwd_controller_pid;
 
     // params
     // visualization opt
@@ -110,6 +111,8 @@ private:
     int MAX_OBJ_PERCENTAGE = 70;
     int MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
     int MAX_NUM_OBJECTS=50; //max number of objects to be detected in frame
+    // execution limits
+    float max_fwd_vel;
 
     //names that will appear at the top of each window
     const string windowName = "Original Image";

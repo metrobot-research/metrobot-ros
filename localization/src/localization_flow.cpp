@@ -19,7 +19,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     ball_vel_pub_ptr_(std::make_shared<ArrowPublisher>(nh_, "/ball_vel", "/t265_odom_frame", 20)),
     d435i_vel_pub_ptr_(std::make_shared<ArrowPublisher>(nh_, "/d435i_vel", "/t265_odom_frame", 20)),
     d435i_lin_vel_estimator(nh_), ball_estimator(nh_),
-    head_controller_pid(nh_, "head"), wheel_rot_controller_pid(nh_, "wheel_rot"),
+    head_controller_pid(nh_, "head"), wheel_rot_controller_pid(nh_, "wheel_rot"), wheel_fwd_controller_pid(nh_, "wheel_fwd"),
     cv_vis(false),
     check_point_cloud(false),
     found_ball(false),
@@ -86,6 +86,9 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     MIN_OBJECT_AREA = MIN_OBJ_PIX_DIAM * MIN_OBJ_PIX_DIAM;
     MAX_OBJECT_AREA = FRAME_HEIGHT * FRAME_WIDTH * MAX_OBJ_PERCENTAGE / 100.;
     nh_.getParam("max_num_objs", MAX_NUM_OBJECTS); // for noise detection, too many obj -> too large noise
+    //// -------- Execution Limits ---------------
+    nh_.getParam("max_fwd_vel", max_fwd_vel);
+
 
     //create slider bars for real-time param tuning
     createTrackbars();
@@ -504,6 +507,15 @@ void LocalizationFlow::calcControlCmd(){
     cmd.yawRateCommand = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
 //    cout << ", yaw_e[deg]: " << yaw_e / M_PI * 180. << ", yaw_cmd[deg/s]: " << cmd.yawRateCommand / M_PI * 180. << endl;
 //    cout << ", omg_d435iwh_ball_yaw[deg/s]: " << omg_d435iwh_ball_yaw / M_PI * 180 << endl;
+
+    float fwd_e = d435iwh_p_d435i_ball.x();
+    float unsaturated_fwd_cmd = wheel_fwd_controller_pid.generateCmd(cur_rgbd_stamped.time, fwd_e);
+    if(unsaturated_fwd_cmd < -max_fwd_vel)
+        cmd.fwdVelocityCommand = -max_fwd_vel;
+    else if(unsaturated_fwd_cmd > max_fwd_vel)
+        cmd.fwdVelocityCommand = max_fwd_vel;
+    else
+        cmd.fwdVelocityCommand = unsaturated_fwd_cmd;
 
     cmd_publisher.publish(cmd);
 }
