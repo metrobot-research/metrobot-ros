@@ -5,6 +5,7 @@
 #include "global_definition/global_definition.h"
 
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <pcl/io/pcd_io.h>
 #include "tools/tic_toc.hpp"
 
@@ -97,7 +98,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
 
 //// ------------- general data processing -----------------------
 void LocalizationFlow::Run(){
-//    time_run->tic();
+    time_run->tic();
     if(readData()){
         if(check_point_cloud){ // only generate a full cloud from rgb+d to check alignment with realsense point cloud
             // Publish the whole point cloud for checking with Realsense point cloud.
@@ -137,7 +138,7 @@ void LocalizationFlow::Run(){
             calcControlCmd();
         }
     }
-//    time_run->toc();
+    time_run->toc();
 }
 
 bool LocalizationFlow::readData(){
@@ -468,7 +469,11 @@ void LocalizationFlow::trackFilteredObject(int &x, int &y, Mat threshold, Mat &c
 //// -------------- Functions for control -------------------------
 void LocalizationFlow::calcControlCmd(){
     // Head motor
-    Eigen::Vector3f d435i_p_d435i_ball = cur_d435i_ori.inverse() * (ball_center - cur_d435i_pos);
+    Eigen::Vector3f d435i_p_d435i_ball = cur_d435i_ori.toRotationMatrix().inverse() * (ball_center - cur_d435i_pos);
+//    cout << "R_d435i_w:\n" << cur_d435i_ori.toRotationMatrix().inverse() << std::endl;
+//    cout << "ball_center:" << ball_center.x() << ", " << ball_center.y() << ", " << ball_center.z() << std::endl;
+//    cout << "cur_d435i_pos: " << cur_d435i_pos.x() << ", " << cur_d435i_pos.y() << ", " << cur_d435i_pos.z() << std::endl;
+//    cout << "d435i_p_d435i_ball: " << d435i_p_d435i_ball.x() << ", " << d435i_p_d435i_ball.y() << ", " << d435i_p_d435i_ball.z() << endl;
     Eigen::Vector3f d435i_p_d435i_ball_yz(0, d435i_p_d435i_ball.y(), d435i_p_d435i_ball.z());
     Eigen::Vector3f d435i_v_d435iw_ball = cur_d435i_ori.inverse() * (ball_estimator.getCurBallVel() - cur_d435i_lin_vel);
     float omg_neck_ball_pitch = d435i_p_d435i_ball_yz.cross(d435i_v_d435iw_ball).x() / pow(d435i_p_d435i_ball_yz.norm(),2) - neck_ang_vel_w_pitch;
@@ -477,7 +482,7 @@ void LocalizationFlow::calcControlCmd(){
 //    float head_motor_vel = omg_neck_ball_pitch + head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
     cmd.upperNeckVelocity = head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
 //    cout << "pitch_e[deg]: " << pitch_e / M_PI * 180. << ", cmd[deg/s]: " << cmd.upperNeckVelocity / M_PI * 180.;
-    cout << "omg_neck_ball_pitch[deg/s]: " << omg_neck_ball_pitch / M_PI * 180;
+//    cout << "omg_neck_ball_pitch[deg/s]: " << omg_neck_ball_pitch / M_PI * 180;
 
     // Wheel rot
     Eigen::Matrix3f R_w_d435i(cur_d435i_ori);
@@ -506,7 +511,7 @@ void LocalizationFlow::calcControlCmd(){
 //    float wheel_ang_vel = omg_d435iwh_ball_yaw + wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
     cmd.yawRateCommand = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
 //    cout << ", yaw_e[deg]: " << yaw_e / M_PI * 180. << ", yaw_cmd[deg/s]: " << cmd.yawRateCommand / M_PI * 180. << endl;
-    cout << ", omg_d435iwh_ball_yaw[deg/s]: " << omg_d435iwh_ball_yaw / M_PI * 180 << endl;
+//    cout << ", omg_d435iwh_ball_yaw[deg/s]: " << omg_d435iwh_ball_yaw / M_PI * 180 << endl;
 
     float fwd_e = d435iwh_p_d435i_ball.x();
     float unsaturated_fwd_cmd = wheel_fwd_controller_pid.generateCmd(cur_rgbd_stamped.time, fwd_e);
