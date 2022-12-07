@@ -49,8 +49,8 @@ list(REMOVE_ITEM ALL_SRCS
         src/subscriber/cloud_subscriber.cpp
         src/subscriber/img_saver.cpp
         src/subscriber/img_subscriber.cpp)
-MESSAGE("ALL_SRCS:")
-MESSAGE(${ALL_SRCS})
+#MESSAGE("ALL_SRCS:")
+#MESSAGE(${ALL_SRCS})
 
 add_executable(localization_node node/localization_node.cpp ${ALL_SRCS})
 target_link_libraries(localization_node ${catkin_LIBRARIES} ${ALL_TARGET_LIBRARIES})
