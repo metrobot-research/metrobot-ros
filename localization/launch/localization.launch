@@ -1,8 +1,8 @@
 <launch>
     <!--visualization-->
     <arg name="cv_vis" default="false"/>
-    <arg name="rviz_ball_cloud" default="false"/>
-    <arg name="rviz_vels" default="false"/>
+    <arg name="rviz_ball_cloud" default="true"/>
+    <arg name="rviz_vels" default="true"/>
     <arg name="vis_cam_model" default="false"/>
     <arg name="check_point_cloud" default="false"/>
     <!--cam params-->
@@ -29,7 +29,8 @@
     <arg name="d435i_lin_vel_est_max_his_time" default="0.2"/> <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt), 0.05 will be too noisy -->
     <!-- ball estimation -->
     <arg name="gnd_height" default="-0.87"/>  <!--TODO: synchronize wheel center data with dual img msg -->
-    <arg name="ball_est_pred_mode" default="static"/> <!-- static: not move || uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
+    <arg name="ball_est_pred_mode" default="decay"/> <!-- static: not move || uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
+    <arg name="decay_mode_coeff" default="0.7"/>
     <arg name="ball_est_max_recent_his_time" default="0.25"/>  <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt) -->
     <arg name="ball_est_max_lost_time" default="1"/>
     <arg name="ball_est_noise_overcoming_vel" default="0.2"/>

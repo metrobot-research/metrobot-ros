@@ -31,6 +31,7 @@ public:
         frame_dt = 1. / freq;
 
         nh_.getParam("ball_est_pred_mode", pred_mode);
+        nh_.getParam("decay_mode_coeff", decay_mode_coeff);
         nh_.getParam("ball_est_max_recent_his_time", max_recent_his_time);
         nh_.getParam("ball_est_max_lost_time", max_lost_time);
         nh_.getParam("ball_est_noise_overcoming_vel", noise_overcoming_vel);
@@ -191,6 +192,9 @@ private:
         }else if(pred_mode == "static"){
             cur_ball_pos_w = prev_ball_pos_w;
             cur_ball_vel_w.setZero();
+        }else if(pred_mode == "decay"){
+            cur_ball_pos_w = prev_ball_pos_w + step_time * prev_ball_vel_w;
+            cur_ball_vel_w = prev_ball_vel_w * decay_mode_coeff;
         }else if(pred_mode == "gravity"){
             // Assume uniform velocity in x,y
             cur_ball_pos_w.block(0,0,2,1) = prev_ball_pos_w.block(0,0,2,1)
@@ -229,6 +233,7 @@ private:
 
     ros::NodeHandle nh_;
     std::string pred_mode;
+    float decay_mode_coeff;
     float max_recent_his_time;
     float max_lost_time;
     float noise_overcoming_vel;

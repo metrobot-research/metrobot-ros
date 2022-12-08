@@ -32,7 +32,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     time_est(std::make_shared<TicToc>("time est: ", true)),
     time_ctrl(std::make_shared<TicToc>("time ctrl: ", true)){
 
-    cmd_publisher = nh_.advertise<customized_msgs::cmd>("/cmd", 20);
+    cmd_publisher = nh_.advertise<customized_msgs::cmd>("/controller_commands", 20);
 
     ////---------------- visualization opt ----------------------------
     nh_.getParam("cv_vis", cv_vis);
@@ -108,7 +108,7 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
 
 //// ------------- general data processing -----------------------
 void LocalizationFlow::Run(){
-    time_run->tic();
+//    time_run->tic();
     if(readData()){
         if(check_point_cloud){ // only generate a full cloud from rgb+d to check alignment with realsense point cloud
             // Publish the whole point cloud for checking with Realsense point cloud.
@@ -120,12 +120,12 @@ void LocalizationFlow::Run(){
             if(cv_vis)
                 updateParams();
 
-            time_cv->tic();
+//            time_cv->tic();
             SegmentBall2D();
-            time_cv->toc();
+//            time_cv->toc();
 
             // Estimate ball pos & vel
-            time_est->tic();
+//            time_est->tic();
             if(found_ball){
                 GetBallCloud();
                 if(!ball_cloud_ptr->empty()){
@@ -150,15 +150,15 @@ void LocalizationFlow::Run(){
                 if(rviz_vels)
                     ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
             }
-            time_est->toc();
+//            time_est->toc();
 
             // Calc control cmd
-            time_ctrl->tic();
+//            time_ctrl->tic();
             calcControlCmd();
-            time_ctrl->toc();
+//            time_ctrl->toc();
         }
     }
-    time_run->toc();
+//    time_run->toc();
 }
 
 bool LocalizationFlow::readData(){
@@ -503,9 +503,9 @@ void LocalizationFlow::calcControlCmd(){
     float omg_neck_ball_pitch = d435i_p_d435i_ball_yz.cross(d435i_v_d435iw_ball).x() / pow(d435i_p_d435i_ball_yz.norm(),2) - neck_ang_vel_w_pitch;
 
     float pitch_e = atan2(-d435i_p_d435i_ball.y(), d435i_p_d435i_ball.z());
-//    float head_motor_vel = omg_neck_ball_pitch + head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
-    cmd.upperNeckVelocity = head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
-//    cout << "pitch_e[deg]: " << pitch_e / M_PI * 180. << ", cmd[deg/s]: " << cmd.upperNeckVelocity / M_PI * 180.;
+//    cmd.headVelocity = omg_neck_ball_pitch + head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
+    cmd.headVelocity = head_controller_pid.generateCmd(cur_rgbd_stamped.time, pitch_e);
+//    cout << "pitch_e[deg]: " << pitch_e / M_PI * 180. << ", cmd[deg/s]: " << cmd.headVelocity / M_PI * 180.;
 //    cout << "omg_neck_ball_pitch[deg/s]: " << omg_neck_ball_pitch / M_PI * 180;
 
     // Wheel rot
@@ -529,22 +529,24 @@ void LocalizationFlow::calcControlCmd(){
 
     Eigen::Vector3f d435iwh_p_d435i_ball_xy(d435iwh_p_d435i_ball.x(), d435iwh_p_d435i_ball.y(), 0);
     Eigen::Vector3f d435iwh_v_d435iwh_ball = R_w_d435iwh.transpose() * (ball_estimator.getCurBallVel() - cur_d435i_lin_vel);
-    float omg_d435iwh_ball_yaw = d435iwh_p_d435i_ball_xy.cross(d435iwh_v_d435iwh_ball).z() / pow(d435iwh_p_d435i_ball_xy.norm(),2) - (cur_d435i_ori.inverse() * cur_d435i_ang_vel).z();
+    float omg_d435iwh_ball_yaw = d435iwh_p_d435i_ball_xy.cross(d435iwh_v_d435iwh_ball).z() / pow(d435iwh_p_d435i_ball_xy.norm(),2);
 
     float yaw_e = atan2(d435iwh_p_d435i_ball.y(), d435iwh_p_d435i_ball.x());
-//    float wheel_ang_vel = omg_d435iwh_ball_yaw + wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
-    cmd.yawRateCommand = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
-//    cout << ", yaw_e[deg]: " << yaw_e / M_PI * 180. << ", yaw_cmd[deg/s]: " << cmd.yawRateCommand / M_PI * 180. << endl;
+//    cmd.t_dot = omg_d435iwh_ball_yaw + wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
+    cmd.t_dot = wheel_rot_controller_pid.generateCmd(cur_rgbd_stamped.time, yaw_e);
+//    cout << ", yaw_e[deg]: " << yaw_e / M_PI * 180. << ", yaw_cmd[deg/s]: " << cmd.t_dot / M_PI * 180. << endl;
 //    cout << ", omg_d435iwh_ball_yaw[deg/s]: " << omg_d435iwh_ball_yaw / M_PI * 180 << endl;
 
     float fwd_e = d435iwh_p_d435i_ball.x();
     float unsaturated_fwd_cmd = wheel_fwd_controller_pid.generateCmd(cur_rgbd_stamped.time, fwd_e);
     if(unsaturated_fwd_cmd < -max_fwd_vel)
-        cmd.fwdVelocityCommand = -max_fwd_vel;
+        cmd.x_dot = -max_fwd_vel;
     else if(unsaturated_fwd_cmd > max_fwd_vel)
-        cmd.fwdVelocityCommand = max_fwd_vel;
+        cmd.x_dot = max_fwd_vel;
     else
-        cmd.fwdVelocityCommand = unsaturated_fwd_cmd;
+        cmd.x_dot = unsaturated_fwd_cmd;
+
+    cout << "x_dot: " << cmd.x_dot << ", t_dot: " << cmd.t_dot << "headVelocity: " << cmd.headVelocity << endl;
 
     cmd_publisher.publish(cmd);
 }
