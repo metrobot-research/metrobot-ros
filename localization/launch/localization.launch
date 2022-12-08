@@ -1,11 +1,14 @@
 <launch>
     <!--visualization-->
     <arg name="cv_vis" default="false"/>
+    <arg name="rviz_ball_cloud" default="false"/>
+    <arg name="rviz_vels" default="false"/>
+    <arg name="vis_cam_model" default="false"/>
     <arg name="check_point_cloud" default="false"/>
     <!--cam params-->
-    <arg name="camera2_color_width"               default="848"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
-    <arg name="camera2_color_height"              default="480"/>
-    <arg name="camera2_color_fps"                 default="60"/>
+    <arg name="camera2_color_width"               default="424"/> <!-- 1280*720*6/30Hz, 848*480*6/30/60Hz, 640*360*6/30/60Hz -->
+    <arg name="camera2_color_height"              default="240"/>
+    <arg name="camera2_color_fps"                 default="15"/>
     <arg name="camera2_filters"              default="decimation,disparity,spatial,temporal"/> <!-- pointcloud,decimation,disparity,spatial,temporal -->
     <arg name="camera2_clip_distance"             default="-2"/>
     <!-- HSV Ball Thresholding-->
@@ -18,15 +21,15 @@
     <!-- obj filtering-->
     <arg name="useMorphOps" default="true"/>
     <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
-    <arg name="dilate_diam" default="15"/> <!--pix elements larger than this will be dilated-->
-    <arg name="min_obj_pix_diam" default="15"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    <arg name="dilate_diam" default="10"/> <!--pix elements larger than this will be dilated-->
+    <arg name="min_obj_pix_diam" default="10"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
     <arg name="max_obj_percentage" default="70"/> <!-- MAX_OBJECT_AREA = max_obj_percentage/100. * img_width * img_height -->
     <arg name="max_num_objs" default="50"/> <!-- 50 is large enough -->
     <!-- d435i lin vel estimation -->
-    <arg name="d435i_lin_vel_est_max_his_time" default="0.1"/> <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt), 0.05 will be too noisy -->
+    <arg name="d435i_lin_vel_est_max_his_time" default="0.2"/> <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt), 0.05 will be too noisy -->
     <!-- ball estimation -->
     <arg name="gnd_height" default="-0.87"/>  <!--TODO: synchronize wheel center data with dual img msg -->
-    <arg name="ball_est_pred_mode" default="gravity"/> <!-- static: not move || uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
+    <arg name="ball_est_pred_mode" default="static"/> <!-- static: not move || uniform: uniform vel always || gravity: physical model considering gravity and gnd bouncing -->
     <arg name="ball_est_max_recent_his_time" default="0.25"/>  <!-- if fps=6Hz, set this to >0.3s(due to -frame_dt) -->
     <arg name="ball_est_max_lost_time" default="1"/>
     <arg name="ball_est_noise_overcoming_vel" default="0.2"/>
@@ -55,6 +58,7 @@
     
 
     <include file="$(find realsense2_camera)/launch/ME206A/rs_d435i_and_t265.launch">
+        <arg name="vis_cam_model" default="$(arg vis_cam_model)"/>
         <arg name="camera2_color_width"               default="$(arg camera2_color_width)"/>
         <arg name="camera2_color_height"              default="$(arg camera2_color_height)"/>
         <arg name="camera2_color_fps"                 default="$(arg camera2_color_fps)"/>
@@ -65,6 +69,8 @@
     <node pkg="localization" type="localization_node" name="localization_node" output="screen">
         <!--cv vis-->
         <param name="cv_vis" value="$(arg cv_vis)"/>
+        <param name="rviz_ball_cloud" value="$(arg rviz_ball_cloud)"/>
+        <param name="rviz_vels" value="$(arg rviz_vels)"/>
         <param name="check_point_cloud" value="$(arg check_point_cloud)"/>
         <!-- Cam Params-->
         <param name="camera2_color_width" value="$(arg camera2_color_width)"/>

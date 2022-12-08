@@ -20,12 +20,14 @@
           + 848*480: [614.37890625, 0.0, 426.29913330078125, 0.0, 613.1614990234375, 252.73573303222656, 0.0, 0.0, 1.0]
           + 640*480: [614.37890625, 0.0, 322.2991638183594, 0.0, 613.1614990234375, 252.73573303222656, 0.0, 0.0, 1.0]
           + 640*360: [460.7841796875, 0.0, 321.724365234375, 0.0, 459.8711242675781, 189.5518035888672, 0.0, 0.0, 1.0]
+          + 424*240: [307.189453125, 0.0, 213.14956665039062, 0.0, 306.58074951171875, 126.36786651611328, 0.0, 0.0, 1.0]
       + `camera2_align_depth` = false:
         + Use `/d435i/depth/camera_info`:
           + 1280*720: [642.2916870117188, 0.0, 637.2142944335938, 0.0, 642.2916870117188, 362.7745361328125, 0.0, 0.0, 1.0]
           + 848*480: [425.51824951171875, 0.0, 422.15447998046875, 0.0, 425.51824951171875, 241.838134765625, 0.0, 0.0, 1.0]
           + 640*480: [385.375, 0.0, 318.3285827636719, 0.0, 385.375, 241.6647186279297, 0.0, 0.0, 1.0]
           + 640*360: [321.1458435058594, 0.0, 318.6071472167969, 0.0, 321.1458435058594, 181.38726806640625, 0.0, 0.0, 1.0]
+          + 424*240: [212.75912475585938, 0.0, 211.07723999023438, 0.0, 212.75912475585938, 120.9190673828125, 0.0, 0.0, 1.0]
       
   
   + Depth Scaling: depth img -> depth in meters:
@@ -115,3 +117,17 @@
       <arg name="ball_est_noise_overcoming_vel" default="0.2"/>
       <arg name="ball_est_short_window_time" default="0.1"/> <!-- should > 2*(1/fps) -->
       ```
+  
+  + resolution & morph:
+    + 848*480:
+    ```
+    <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
+    <arg name="dilate_diam" default="15"/> <!--pix elements larger than this will be dilated-->
+    <arg name="min_obj_pix_diam" default="15"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    ```
+    + 424*240:
+    ```
+    <arg name="erode_diam" default="4"/> <!--pix elements smaller than this will be eroded-->
+    <arg name="dilate_diam" default="10"/> <!--pix elements larger than this will be dilated-->
+    <arg name="min_obj_pix_diam" default="10"/> <!-- MIN_OBJECT_AREA = min_obj_pix_diam^2 -->
+    ```

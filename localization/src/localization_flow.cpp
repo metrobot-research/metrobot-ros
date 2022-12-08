@@ -22,16 +22,22 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
     d435i_lin_vel_estimator(nh_), ball_estimator(nh_),
     head_controller_pid(nh_, "head"), wheel_rot_controller_pid(nh_, "wheel_rot"), wheel_fwd_controller_pid(nh_, "wheel_fwd"),
     cv_vis(false),
+    rviz_ball_cloud(false), rviz_vels(false),
     check_point_cloud(false),
     found_ball(false),
     full_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>()),
     ball_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>()),
-    time_run(std::make_shared<TicToc>("time per Run(): ", true)){
+    time_run(std::make_shared<TicToc>("time per Run(): ", true)),
+    time_cv(std::make_shared<TicToc>("time cv: ", true)),
+    time_est(std::make_shared<TicToc>("time est: ", true)),
+    time_ctrl(std::make_shared<TicToc>("time ctrl: ", true)){
 
     cmd_publisher = nh_.advertise<customized_msgs::cmd>("/cmd", 20);
 
     ////---------------- visualization opt ----------------------------
     nh_.getParam("cv_vis", cv_vis);
+    nh_.getParam("rviz_ball_cloud", rviz_ball_cloud);
+    nh_.getParam("rviz_vels", rviz_vels);
     nh_.getParam("check_point_cloud", check_point_cloud);
 
     ////---------------- cam params ---------------------------------
@@ -56,6 +62,10 @@ LocalizationFlow::LocalizationFlow(ros::NodeHandle &nh):
         K << 460.7841796875, 0.0, 321.724365234375,
                 0.0, 459.8711242675781, 189.5518035888672,
                 0.0, 0.0, 1.0;
+    }else if(FRAME_WIDTH == 424 && FRAME_HEIGHT == 240){
+        K << 307.189453125, 0.0, 213.14956665039062,
+             0.0, 306.58074951171875, 126.36786651611328,
+             0.0, 0.0, 1.0;
     }else{
         cerr << "-------This rgb resolution is not recommended! -----------" << endl;
     }
@@ -110,20 +120,26 @@ void LocalizationFlow::Run(){
             if(cv_vis)
                 updateParams();
 
+            time_cv->tic();
             SegmentBall2D();
+            time_cv->toc();
 
             // Estimate ball pos & vel
+            time_est->tic();
             if(found_ball){
                 GetBallCloud();
                 if(!ball_cloud_ptr->empty()){
                     CalcBallCenter3D();
                     ball_estimator.addPos(cur_rgbd_stamped.time, ball_center, cur_wheel_center);
-                    ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
+                    if(rviz_ball_cloud)
+                        ball_cloud_pub_ptr_->Publish(ball_cloud_ptr, cur_rgbd_stamped.time);
                     // Publish ball tf wrt world frame, with orientation set to identity for convenience
                 }else{ // if detect ball in rgb but cloud is empty, treat cur frame as lost
+//                    cout << "cv found ball but ball cloud empty" << endl;
                     ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
                 }
             }else{
+//                cout << "cv says ball not found" << endl;
                 ball_estimator.addLost(cur_rgbd_stamped.time, cur_wheel_center);
             }
 
@@ -131,11 +147,15 @@ void LocalizationFlow::Run(){
                 ball_center = ball_estimator.getCurBallPos();
                 tf_broadcast_ptr_->SendTransform("/t265_odom_frame", "/ball_real",
                                                  ball_center, Eigen::Quaternionf::Identity(), cur_rgbd_stamped.time);
-                ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
+                if(rviz_vels)
+                    ball_vel_pub_ptr_->Publish(ball_center, ball_center + ball_estimator.getCurBallVel(), cur_rgbd_stamped.time);
             }
+            time_est->toc();
 
             // Calc control cmd
+            time_ctrl->tic();
             calcControlCmd();
+            time_ctrl->toc();
         }
     }
     time_run->toc();
@@ -153,9 +173,10 @@ bool LocalizationFlow::readData(){
     nh_.getParam("gnd_height", cur_wheel_center.z());
     neck_ang_vel_w_pitch = 0; // TODO: ------- get it from subscriber---------
     rgb_d_sub_ptr_->ParseData(rgb_d_buffer_);
-    if(rgb_d_buffer_.empty())
+    if(rgb_d_buffer_.empty()){
+//        cerr << "rgb_d_buffer_ empty" << std::endl;
         return false;
-    else{
+    }else{
         cur_rgbd_stamped = rgb_d_buffer_.back();
         rgb_d_buffer_.clear();
     }
@@ -171,12 +192,14 @@ bool LocalizationFlow::readData(){
 
     d435i_lin_vel_estimator.addPos(cur_rgbd_stamped.time, cur_d435i_pos);
     cur_d435i_lin_vel = d435i_lin_vel_estimator.getCurVel();
-    d435i_vel_pub_ptr_->Publish(cur_d435i_pos, cur_d435i_pos + cur_d435i_lin_vel, cur_rgbd_stamped.time);
+    if(rviz_vels)
+        d435i_vel_pub_ptr_->Publish(cur_d435i_pos, cur_d435i_pos + cur_d435i_lin_vel, cur_rgbd_stamped.time);
 
     // synchronize gyro and wheel_center to the last rgb_d msg
-    if(gyro_buffer_.empty()) // todo: when wheel center is subscribed, also add wheel_center_buffer_.empty()
+    if(gyro_buffer_.empty()) { // todo: when wheel center is subscribed, also add wheel_center_buffer_.empty()
+//        cerr << "gyro_buffer_ empty" << std::endl;
         return false;
-    else{
+    }else{
         //sync gyro
         bool has_gyro = false;
         while(!gyro_buffer_.empty()){
@@ -292,6 +315,7 @@ void LocalizationFlow::GetBallCloud(){
     cv_bridge::CvImageConstPtr depth_ptr = cur_rgbd_stamped.img2_ptr;
 
     int ROI_radius = min(ball_pix_radius, 20); // when ball is too close and thus too big, only need pt.s around center
+//    cout << "ball_pix_radius: " << ball_pix_radius << endl;
     int i_min = max(ball_i2D - ROI_radius, 0);
     int i_max = min(ball_i2D + ROI_radius, FRAME_HEIGHT-1);
     int j_min = max(ball_j2D - ROI_radius, 0);

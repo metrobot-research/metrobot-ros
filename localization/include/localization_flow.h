@@ -86,6 +86,7 @@ private:
     // params
     // visualization opt
     bool cv_vis;
+    bool rviz_ball_cloud, rviz_vels;
     bool check_point_cloud;
     // camera params
     float clip_z_dis[2]; // min, max in meters, according to datasheet
@@ -150,6 +151,9 @@ private:
 
     // timing
     std::shared_ptr<TicToc> time_run;
+    std::shared_ptr<TicToc> time_cv;
+    std::shared_ptr<TicToc> time_est;
+    std::shared_ptr<TicToc> time_ctrl;
 };
 
 #endif //SRC_LOCALIZATION_FLOW_H
